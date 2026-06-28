@@ -1,0 +1,68 @@
+import {
+  createContext,
+  useContext,
+  useState,
+  type PropsWithChildren,
+} from 'react'
+import {
+  clearAuthSession,
+  loginRequest,
+  persistAuthSession,
+  readStoredToken,
+  readStoredUser,
+  type LoginDto,
+  type UsuarioAuth,
+} from './auth.service'
+
+interface AuthContextValue {
+  usuario: UsuarioAuth | null
+  token: string | null
+  isAuthenticated: boolean
+  login: (credentials: LoginDto) => Promise<void>
+  logout: () => void
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined)
+
+export const AuthProvider = ({ children }: PropsWithChildren) => {
+  const [usuario, setUsuario] = useState<UsuarioAuth | null>(() => readStoredUser())
+  const [token, setToken] = useState<string | null>(() => readStoredToken())
+
+  const login = async (credentials: LoginDto) => {
+    const response = await loginRequest(credentials)
+
+    persistAuthSession(response)
+    setUsuario(response.usuario)
+    setToken(response.accessToken)
+  }
+
+  const logout = () => {
+    clearAuthSession()
+    setUsuario(null)
+    setToken(null)
+  }
+
+  return (
+    <AuthContext.Provider
+      value={{
+        usuario,
+        token,
+        isAuthenticated: Boolean(token),
+        login,
+        logout,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  )
+}
+
+export const useAuth = () => {
+  const context = useContext(AuthContext)
+
+  if (!context) {
+    throw new Error('useAuth debe usarse dentro de AuthProvider.')
+  }
+
+  return context
+}
