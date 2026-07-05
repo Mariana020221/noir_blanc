@@ -16,6 +16,13 @@ async function bootstrap() {
     configService.get<string>('frontendUrl') ?? 'http://localhost:5173';
   const uploadsPath = join(process.cwd(), 'uploads');
 
+  console.log('================================');
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+  console.log('PORT ENV:', process.env.PORT);
+  console.log('PORT CONFIG:', port);
+  console.log('FRONTEND_URL:', frontendUrl);
+  console.log('================================');
+
   await mkdir(uploadsPath, { recursive: true });
 
   app.useGlobalPipes(
@@ -30,6 +37,7 @@ async function bootstrap() {
     origin: frontendUrl,
     credentials: true,
   });
+
   app.useStaticAssets(uploadsPath, {
     prefix: '/uploads',
   });
@@ -44,7 +52,16 @@ async function bootstrap() {
   const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('docs', app, swaggerDocument);
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
+
+  console.log('================================');
+  console.log(`🚀 Servidor escuchando en puerto ${port}`);
+  console.log(`🌐 URL: ${await app.getUrl()}`);
+  console.log('================================');
 }
 
-void bootstrap();
+bootstrap().catch((error) => {
+  console.error('Error al iniciar la aplicación');
+  console.error(error);
+  process.exit(1);
+});
