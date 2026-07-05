@@ -18,6 +18,7 @@ interface AuthContextValue {
   usuario: UsuarioAuth | null
   token: string | null
   isAuthenticated: boolean
+  isSuperUser: boolean
   login: (credentials: LoginDto) => Promise<void>
   logout: () => void
 }
@@ -48,6 +49,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         usuario,
         token,
         isAuthenticated: Boolean(token),
+        isSuperUser: usuario?.rol === 'SUPER_ADMIN',
         login,
         logout,
       }}

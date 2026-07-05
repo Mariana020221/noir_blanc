@@ -6,7 +6,7 @@ export interface UsuarioAuth {
   id: number
   nombre: string
   email: string
-  rol: 'ADMIN'
+  rol: 'SUPER_ADMIN' | 'ADMIN'
   activo: boolean
   createdAt: string
   updatedAt: string
@@ -53,6 +53,12 @@ export const getBootstrapStatus = async () => {
 
 export const registerFirstAdmin = async (payload: CrearUsuarioDto) => {
   const { data } = await api.post<UsuarioAuth>('/usuarios/bootstrap', payload)
+
+  return data
+}
+
+export const registerUser = async (payload: CrearUsuarioDto) => {
+  const { data } = await api.post<UsuarioAuth>('/usuarios/register', payload)
 
   return data
 }

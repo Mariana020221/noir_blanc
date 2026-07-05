@@ -6,7 +6,7 @@ const getLinkClassName = ({ isActive }: { isActive: boolean }) =>
 
 export const AdminLayout = () => {
   const navigate = useNavigate()
-  const { logout, usuario } = useAuth()
+  const { isSuperUser, logout, usuario } = useAuth()
 
   const handleLogout = () => {
     logout()
@@ -27,21 +27,28 @@ export const AdminLayout = () => {
               <span>Dashboard</span>
               <span aria-hidden="true">01</span>
             </NavLink>
+            {isSuperUser ? (
+              <NavLink className={getLinkClassName} to="/admin/usuarios">
+                <span>Usuarios</span>
+                <span aria-hidden="true">02</span>
+              </NavLink>
+            ) : null}
             <NavLink className={getLinkClassName} to="/admin/productos/crear">
               <span>Crear producto</span>
-              <span aria-hidden="true">02</span>
+              <span aria-hidden="true">{isSuperUser ? '03' : '02'}</span>
             </NavLink>
             <NavLink className={getLinkClassName} to="/admin/productos/editar">
               <span>Editar productos</span>
-              <span aria-hidden="true">03</span>
+              <span aria-hidden="true">{isSuperUser ? '04' : '03'}</span>
             </NavLink>
           </nav>
 
           <div className="sidebar-note">
             <strong>{usuario?.nombre ?? 'Administrador'}</strong>
             <p className="muted-text">
-              Divide las altas y las ediciones en modulos distintos para trabajar
-              con mas control.
+              {isSuperUser
+                ? 'El superusuario controla las cuentas del equipo y el resto del catalogo desde modulos separados.'
+                : 'Tu cuenta puede administrar el catalogo, pero no tiene permisos de superusuario para gestionar cuentas.'}
             </p>
           </div>
         </div>
@@ -58,7 +65,8 @@ export const AdminLayout = () => {
             <h1 className="panel-title">Noir & Blanc Control Room</h1>
           </div>
           <div className="small-label">
-            Sesion activa: {usuario?.email ?? 'administrador'}
+            Sesion activa: {usuario?.email ?? 'administrador'} ·{' '}
+            {usuario?.rol === 'SUPER_ADMIN' ? 'Superusuario' : 'Usuario del panel'}
           </div>
         </header>
 

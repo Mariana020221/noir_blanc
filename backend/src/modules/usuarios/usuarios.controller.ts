@@ -6,10 +6,12 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { BootstrapStatusDto } from './dto/bootstrap-status.dto';
 import { CrearUsuarioDto } from './dto/crear-usuario.dto';
-import { Usuario } from './entities/usuario.entity';
+import { Usuario, UsuarioRol } from './entities/usuario.entity';
 import { UsuariosService } from './usuarios.service';
 
 @ApiTags('Usuarios')
@@ -18,10 +20,11 @@ export class UsuariosController {
   constructor(private readonly usuariosService: UsuariosService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UsuarioRol.SUPER_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Crear un usuario administrador autenticado',
+    summary: 'Crear un usuario del panel autenticado por superusuario',
   })
   @ApiCreatedResponse({
     description: 'Usuario creado correctamente.',
@@ -31,13 +34,26 @@ export class UsuariosController {
     return this.usuariosService.createAdmin(crearUsuarioDto);
   }
 
+  @Post('register')
+  @ApiOperation({
+    summary:
+      'Registrar un usuario adicional del panel cuando el superusuario inicial ya existe',
+  })
+  @ApiCreatedResponse({
+    description: 'Usuario del panel creado correctamente.',
+    type: Usuario,
+  })
+  register(@Body() crearUsuarioDto: CrearUsuarioDto): Promise<Usuario> {
+    return this.usuariosService.registerAdmin(crearUsuarioDto);
+  }
+
   @Post('bootstrap')
   @ApiOperation({
     summary:
-      'Crear el primer usuario administrador cuando el sistema aun no tiene usuarios',
+      'Crear el primer superusuario cuando el sistema aun no tiene usuarios',
   })
   @ApiCreatedResponse({
-    description: 'Primer usuario administrador creado correctamente.',
+    description: 'Primer superusuario creado correctamente.',
     type: Usuario,
   })
   createBootstrapAdmin(
@@ -61,9 +77,10 @@ export class UsuariosController {
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UsuarioRol.SUPER_ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Listar usuarios administradores' })
+  @ApiOperation({ summary: 'Listar usuarios del panel para el superusuario' })
   @ApiOkResponse({
     description: 'Listado de usuarios.',
     type: Usuario,

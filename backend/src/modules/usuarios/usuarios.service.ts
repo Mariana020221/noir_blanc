@@ -30,10 +30,29 @@ export class UsuariosService {
       );
     }
 
-    return this.createAdmin(crearUsuarioDto);
+    return this.createUser(crearUsuarioDto, UsuarioRol.SUPER_ADMIN);
   }
 
   async createAdmin(crearUsuarioDto: CrearUsuarioDto): Promise<Usuario> {
+    return this.createUser(crearUsuarioDto, UsuarioRol.ADMIN);
+  }
+
+  async registerAdmin(crearUsuarioDto: CrearUsuarioDto): Promise<Usuario> {
+    const canBootstrap = await this.canBootstrap();
+
+    if (canBootstrap) {
+      throw new ForbiddenException(
+        'Primero crea el superusuario inicial antes de registrar mas usuarios.',
+      );
+    }
+
+    return this.createUser(crearUsuarioDto, UsuarioRol.ADMIN);
+  }
+
+  private async createUser(
+    crearUsuarioDto: CrearUsuarioDto,
+    rol: UsuarioRol,
+  ): Promise<Usuario> {
     const email = crearUsuarioDto.email.trim().toLowerCase();
     const existente = await this.usuariosRepository
       .createQueryBuilder('usuario')
@@ -54,7 +73,7 @@ export class UsuariosService {
       nombre: crearUsuarioDto.nombre.trim(),
       email,
       password: passwordHash,
-      rol: UsuarioRol.ADMIN,
+      rol,
       activo: true,
     });
 

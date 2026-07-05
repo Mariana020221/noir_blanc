@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 
 export enum UsuarioRol {
+  SUPER_ADMIN = 'SUPER_ADMIN',
   ADMIN = 'ADMIN',
 }
 
@@ -42,7 +43,7 @@ export class Usuario {
   @ApiProperty({
     enum: UsuarioRol,
     enumName: 'UsuarioRol',
-    example: UsuarioRol.ADMIN,
+    example: UsuarioRol.SUPER_ADMIN,
     description: 'Rol asignado al usuario.',
   })
   @Column({

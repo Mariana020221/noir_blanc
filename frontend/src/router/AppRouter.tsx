@@ -7,6 +7,7 @@ import {
   ProductosCrearPage,
   ProductosEditarPage,
 } from '../pages/admin/ProductosAdminPage'
+import { UsuariosAdminPage } from '../pages/admin/UsuariosAdminPage'
 import { LoginPage } from '../pages/auth/LoginPage'
 import { CatalogoPage } from '../pages/public/CatalogoPage'
 import { ProductoDetallePage } from '../pages/public/ProductoDetallePage'
@@ -24,6 +25,7 @@ export const AppRouter = () => (
       <Route element={<ProtectedRoute />}>
         <Route element={<AdminLayout />} path="/admin">
           <Route element={<DashboardPage />} index />
+          <Route element={<UsuariosAdminPage />} path="usuarios" />
           <Route path="productos">
             <Route element={<Navigate replace to="crear" />} index />
             <Route element={<ProductosCrearPage />} path="crear" />

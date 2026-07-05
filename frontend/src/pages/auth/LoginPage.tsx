@@ -5,6 +5,7 @@ import { useAuth } from '../../auth/AuthContext'
 import {
   getBootstrapStatus,
   registerFirstAdmin,
+  registerUser,
 } from '../../auth/auth.service'
 
 type AuthMode = 'login' | 'register'
@@ -67,11 +68,22 @@ export const LoginPage = () => {
       setError(null)
 
       if (mode === 'register') {
-        await registerFirstAdmin({
+        if (checkingBootstrap) {
+          setError('Espera un momento mientras validamos el acceso inicial.')
+          return
+        }
+
+        const payload = {
           nombre,
           email,
           password,
-        })
+        }
+
+        if (canCreateFirstAdmin) {
+          await registerFirstAdmin(payload)
+        } else {
+          await registerUser(payload)
+        }
       }
 
       await login({ email, password })
@@ -81,7 +93,9 @@ export const LoginPage = () => {
         getApiErrorMessage(
           requestError,
           mode === 'register'
-            ? 'No fue posible crear tu usuario inicial.'
+            ? canCreateFirstAdmin
+              ? 'No fue posible crear tu usuario inicial.'
+              : 'No fue posible registrar el usuario del panel.'
             : 'No fue posible iniciar sesion con esas credenciales.',
         ),
       )
@@ -90,7 +104,15 @@ export const LoginPage = () => {
     }
   }
 
-  const showRegisterOption = canCreateFirstAdmin && !checkingBootstrap
+  const registerEyebrow = canCreateFirstAdmin
+    ? 'Primer acceso'
+    : 'Registro de equipo'
+  const registerTitle = canCreateFirstAdmin
+    ? 'Crear tu usuario'
+    : 'Crear usuario del panel'
+  const registerDescription = canCreateFirstAdmin
+    ? 'Si aun no existe administrador, crea aqui el primer usuario y entrara al panel de productos.'
+    : 'El primer acceso ya existe. Los registros posteriores entran sin permisos de superusuario y no pueden administrar cuentas.'
 
   return (
     <main className="login-page">
@@ -122,14 +144,14 @@ export const LoginPage = () => {
         <section className="login-card">
           <div>
             <span className="eyebrow">
-              {mode === 'register' ? 'Primer acceso' : 'Sign in'}
+              {mode === 'register' ? registerEyebrow : 'Sign in'}
             </span>
             <h2 className="panel-title">
-              {mode === 'register' ? 'Crear tu usuario' : 'Iniciar sesion'}
+              {mode === 'register' ? registerTitle : 'Iniciar sesion'}
             </h2>
             <p className="muted-text">
               {mode === 'register'
-                ? 'Si aun no existe administrador, crea aqui el primer usuario y entrara al panel de productos.'
+                ? registerDescription
                 : 'Usa tu correo de administrador para acceder al modulo interno.'}
             </p>
           </div>
@@ -138,30 +160,28 @@ export const LoginPage = () => {
             <div className="muted-text">Verificando si el sistema necesita su primer administrador...</div>
           ) : null}
 
-          {showRegisterOption ? (
-            <div className="mode-switch" role="tablist" aria-label="Modo de acceso">
-              <button
-                className={`mode-button${mode === 'login' ? ' is-active' : ''}`}
-                onClick={() => {
-                  setMode('login')
-                  setError(null)
-                }}
-                type="button"
-              >
-                Iniciar sesion
-              </button>
-              <button
-                className={`mode-button${mode === 'register' ? ' is-active' : ''}`}
-                onClick={() => {
-                  setMode('register')
-                  setError(null)
-                }}
-                type="button"
-              >
-                Crear tu usuario
-              </button>
-            </div>
-          ) : null}
+          <div className="mode-switch" role="tablist" aria-label="Modo de acceso">
+            <button
+              className={`mode-button${mode === 'login' ? ' is-active' : ''}`}
+              onClick={() => {
+                setMode('login')
+                setError(null)
+              }}
+              type="button"
+            >
+              Iniciar sesion
+            </button>
+            <button
+              className={`mode-button${mode === 'register' ? ' is-active' : ''}`}
+              onClick={() => {
+                setMode('register')
+                setError(null)
+              }}
+              type="button"
+            >
+              Crear usuario
+            </button>
+          </div>
 
           {error ? <div className="alert alert--error">{error}</div> : null}
 
@@ -173,7 +193,11 @@ export const LoginPage = () => {
                   autoComplete="name"
                   className="text-input"
                   onChange={(event) => setNombre(event.target.value)}
-                  placeholder="Nombre del administrador"
+                  placeholder={
+                    canCreateFirstAdmin
+                      ? 'Nombre del superusuario inicial'
+                      : 'Nombre del usuario del panel'
+                  }
                   required
                   type="text"
                   value={nombre}
@@ -209,7 +233,7 @@ export const LoginPage = () => {
 
             <button
               className="button button--primary"
-              disabled={submitting}
+              disabled={submitting || checkingBootstrap}
               type="submit"
             >
               {submitting
