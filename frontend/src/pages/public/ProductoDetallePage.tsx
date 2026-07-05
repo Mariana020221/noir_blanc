@@ -12,8 +12,12 @@ const buildGaleria = (producto: Producto | null) => {
     return []
   }
 
-  return [producto.imagenPrincipal, ...producto.imagenes].filter(
-    (image): image is string => Boolean(image),
+  return Array.from(
+    new Set(
+      [producto.imagenPrincipal, ...producto.imagenes].filter(
+        (image): image is string => Boolean(image),
+      ),
+    ),
   )
 }
 
@@ -21,6 +25,7 @@ export const ProductoDetallePage = () => {
   const { id } = useParams()
   const [producto, setProducto] = useState<Producto | null>(null)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const [selectedImageHasError, setSelectedImageHasError] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -68,6 +73,10 @@ export const ProductoDetallePage = () => {
     }
   }, [id])
 
+  useEffect(() => {
+    setSelectedImageHasError(false)
+  }, [selectedImage])
+
   const galeria = buildGaleria(producto)
 
   if (loading) {
@@ -109,8 +118,12 @@ export const ProductoDetallePage = () => {
       <section className="detail-grid">
         <article>
           <div className="detail-media">
-            {selectedImage ? (
-              <img alt={producto.nombre} src={selectedImage} />
+            {selectedImage && !selectedImageHasError ? (
+              <img
+                alt={producto.nombre}
+                onError={() => setSelectedImageHasError(true)}
+                src={selectedImage}
+              />
             ) : (
               <div className="media-fallback">Noir & Blanc</div>
             )}

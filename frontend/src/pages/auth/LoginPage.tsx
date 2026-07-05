@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { getApiErrorMessage } from '../../api/api'
 import { useAuth } from '../../auth/AuthContext'
 import {
@@ -23,13 +23,13 @@ export const LoginPage = () => {
   const [error, setError] = useState<string | null>(null)
 
   if (isAuthenticated) {
-    return <Navigate replace to="/admin/productos" />
+    return <Navigate replace to="/admin/productos/crear" />
   }
 
   const fromState = location.state as { from?: string } | null
   const redirectTo = fromState?.from?.startsWith('/admin')
     ? fromState.from
-    : '/admin/productos'
+    : '/admin/productos/crear'
 
   useEffect(() => {
     let active = true
@@ -221,6 +221,13 @@ export const LoginPage = () => {
                   : 'Iniciar sesion'}
             </button>
           </form>
+
+          <div className="login-shortcuts">
+            <span className="small-label">Acceso rapido</span>
+            <Link className="button button--ghost" to="/">
+              Ir al catalogo publico
+            </Link>
+          </div>
         </section>
       </div>
     </main>

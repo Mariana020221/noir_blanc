@@ -13,15 +13,23 @@ const ProductMedia = ({
 }: {
   src: string | null
   alt: string
-}) => (
-  <div className="product-media">
-    {src ? (
-      <img alt={alt} loading="lazy" src={src} />
-    ) : (
-      <div className="media-fallback">Noir & Blanc</div>
-    )}
-  </div>
-)
+}) => {
+  const [hasError, setHasError] = useState(false)
+
+  useEffect(() => {
+    setHasError(false)
+  }, [src])
+
+  return (
+    <div className="product-media">
+      {src && !hasError ? (
+        <img alt={alt} loading="lazy" onError={() => setHasError(true)} src={src} />
+      ) : (
+        <div className="media-fallback">Noir & Blanc</div>
+      )}
+    </div>
+  )
+}
 
 export const CatalogoPage = () => {
   const [productos, setProductos] = useState<Producto[]>([])

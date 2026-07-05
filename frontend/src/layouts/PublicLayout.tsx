@@ -27,7 +27,7 @@ export const PublicLayout = () => {
             className={({ isActive }) =>
               `nav-pill${isActive ? ' is-active' : ''}`
             }
-            to={isAuthenticated ? '/admin/productos' : '/login'}
+            to={isAuthenticated ? '/admin/productos/crear' : '/login'}
           >
             {isAuthenticated ? 'Panel admin' : 'Iniciar sesion'}
           </NavLink>

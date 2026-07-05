@@ -59,8 +59,8 @@ export const DashboardPage = () => {
           <h2>Dashboard</h2>
           <p>Panorama rapido del catalogo y la visibilidad actual de la tienda.</p>
         </div>
-        <Link className="button button--secondary" to="/admin/productos">
-          Gestionar productos
+        <Link className="button button--secondary" to="/admin/productos/crear">
+          Crear productos
         </Link>
       </section>
 

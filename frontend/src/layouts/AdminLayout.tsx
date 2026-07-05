@@ -14,7 +14,7 @@ export const AdminLayout = () => {
   }
 
   return (
-    <div className="app-shell admin-layout">
+    <div className="app-shell app-shell--admin admin-layout">
       <aside className="admin-sidebar">
         <div className="content-stack">
           <div className="sidebar-copy">
@@ -27,17 +27,21 @@ export const AdminLayout = () => {
               <span>Dashboard</span>
               <span aria-hidden="true">01</span>
             </NavLink>
-            <NavLink className={getLinkClassName} to="/admin/productos">
-              <span>Productos</span>
+            <NavLink className={getLinkClassName} to="/admin/productos/crear">
+              <span>Crear producto</span>
               <span aria-hidden="true">02</span>
+            </NavLink>
+            <NavLink className={getLinkClassName} to="/admin/productos/editar">
+              <span>Editar productos</span>
+              <span aria-hidden="true">03</span>
             </NavLink>
           </nav>
 
           <div className="sidebar-note">
             <strong>{usuario?.nombre ?? 'Administrador'}</strong>
             <p className="muted-text">
-              Gestiona catalogo, visibilidad y altas de producto desde un solo
-              panel.
+              Divide las altas y las ediciones en modulos distintos para trabajar
+              con mas control.
             </p>
           </div>
         </div>

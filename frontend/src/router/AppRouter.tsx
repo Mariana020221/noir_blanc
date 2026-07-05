@@ -3,7 +3,10 @@ import { ProtectedRoute } from '../auth/ProtectedRoute'
 import { AdminLayout } from '../layouts/AdminLayout'
 import { PublicLayout } from '../layouts/PublicLayout'
 import { DashboardPage } from '../pages/admin/DashboardPage'
-import { ProductosAdminPage } from '../pages/admin/ProductosAdminPage'
+import {
+  ProductosCrearPage,
+  ProductosEditarPage,
+} from '../pages/admin/ProductosAdminPage'
 import { LoginPage } from '../pages/auth/LoginPage'
 import { CatalogoPage } from '../pages/public/CatalogoPage'
 import { ProductoDetallePage } from '../pages/public/ProductoDetallePage'
@@ -21,7 +24,11 @@ export const AppRouter = () => (
       <Route element={<ProtectedRoute />}>
         <Route element={<AdminLayout />} path="/admin">
           <Route element={<DashboardPage />} index />
-          <Route element={<ProductosAdminPage />} path="productos" />
+          <Route path="productos">
+            <Route element={<Navigate replace to="crear" />} index />
+            <Route element={<ProductosCrearPage />} path="crear" />
+            <Route element={<ProductosEditarPage />} path="editar" />
+          </Route>
         </Route>
       </Route>
 

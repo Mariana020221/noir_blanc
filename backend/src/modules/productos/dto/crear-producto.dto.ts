@@ -96,7 +96,7 @@ export class CrearProductoDto {
     description: 'URL de la imagen principal del producto.',
   })
   @IsOptional()
-  @IsUrl()
+  @IsUrl({ require_tld: false })
   @MaxLength(500)
   imagenPrincipal?: string;
 
@@ -111,7 +111,7 @@ export class CrearProductoDto {
   @IsOptional()
   @IsArray()
   @ArrayUnique()
-  @IsUrl({}, { each: true })
+  @IsUrl({ require_tld: false }, { each: true })
   @MaxLength(500, { each: true })
   imagenes?: string[];
 

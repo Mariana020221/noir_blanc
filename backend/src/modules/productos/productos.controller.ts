@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -10,16 +11,24 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
+import { extname } from 'node:path';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { diskStorage } from 'multer';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ActualizarProductoDto } from './dto/actualizar-producto.dto';
 import { BuscarProductosDto } from './dto/buscar-productos.dto';
@@ -27,10 +36,94 @@ import { CrearProductoDto } from './dto/crear-producto.dto';
 import { Producto } from './entities/producto.entity';
 import { ProductosService } from './productos.service';
 
+const allowedImageMimeTypes = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/avif',
+  'image/gif',
+]);
+const maxProductImagesPerRequest = 8;
+const maxProductImageSizeInBytes = 5 * 1024 * 1024;
+
+const isSafeExtension = (value: string) => /^[.a-z0-9]+$/.test(value);
+
 @ApiTags('Productos')
 @Controller('productos')
 export class ProductosController {
   constructor(private readonly productosService: ProductosService) {}
+
+  @Post('uploads')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    FilesInterceptor('files', maxProductImagesPerRequest, {
+      storage: diskStorage({
+        destination: 'uploads',
+        filename: (_request, file, callback) => {
+          const extension = extname(file.originalname).toLowerCase();
+          const safeExtension = isSafeExtension(extension) ? extension : '';
+
+          callback(
+            null,
+            `producto-${Date.now()}-${randomUUID()}${safeExtension}`,
+          );
+        },
+      }),
+      fileFilter: (_request, file, callback) => {
+        if (!allowedImageMimeTypes.has(file.mimetype)) {
+          callback(
+            new BadRequestException(
+              'Solo se permiten imagenes JPG, PNG, WEBP, AVIF o GIF.',
+            ),
+            false,
+          );
+          return;
+        }
+
+        callback(null, true);
+      },
+      limits: {
+        fileSize: maxProductImageSizeInBytes,
+      },
+    }),
+  )
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['files'],
+      properties: {
+        files: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+        },
+      },
+    },
+  })
+  @ApiOperation({ summary: 'Subir imagenes de producto' })
+  @ApiCreatedResponse({
+    description: 'Imagenes cargadas correctamente.',
+    schema: {
+      example: {
+        paths: ['/uploads/producto-12345-demo.jpg'],
+      },
+    },
+  })
+  uploadImages(
+    @UploadedFiles() files: Array<{ filename: string }> = [],
+  ): { paths: string[] } {
+    if (files.length === 0) {
+      throw new BadRequestException('Adjunta al menos una imagen.');
+    }
+
+    return {
+      paths: this.productosService.buildImagePaths(files),
+    };
+  }
 
   @Post()
   @UseGuards(JwtAuthGuard)

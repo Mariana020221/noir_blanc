@@ -79,4 +79,8 @@ export class ProductosService {
     await this.findOne(id);
     await this.productosRepository.softDelete(id);
   }
+
+  buildImagePaths(files: Array<{ filename: string }>): string[] {
+    return files.map((file) => `/uploads/${file.filename}`);
+  }
 }
