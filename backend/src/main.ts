@@ -14,6 +14,7 @@ async function bootstrap() {
   const port = configService.get<number>('port') ?? 3000;
   const frontendUrl =
     configService.get<string>('frontendUrl') ?? 'http://localhost:5173';
+
   const uploadsPath = join(process.cwd(), 'uploads');
 
   console.log('================================');
@@ -33,9 +34,34 @@ async function bootstrap() {
     }),
   );
 
+  const allowedOrigins = [
+    frontendUrl,
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://noirandblanc.up.railway.app',
+  ]
+    .filter(Boolean)
+    .map((url) => url.replace(/\/$/, ''));
+
   app.enableCors({
-    origin: frontendUrl,
+    origin: (origin, callback) => {
+      // Permite herramientas como Postman o curl
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      const normalizedOrigin = origin.replace(/\/$/, '');
+
+      if (allowedOrigins.includes(normalizedOrigin)) {
+        return callback(null, true);
+      }
+
+      console.error('❌ CORS bloqueado para:', origin);
+      return callback(new Error(`Origen no permitido: ${origin}`), false);
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   app.useStaticAssets(uploadsPath, {
