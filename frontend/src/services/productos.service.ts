@@ -1,5 +1,11 @@
 import api, { API_URL, AUTH_TOKEN_STORAGE_KEY } from '../api/api'
 
+export interface ProductoImagenColor {
+  imagen: string
+  color: string | null
+  colorHex: string | null
+}
+
 export interface Producto {
   id: number
   nombre: string
@@ -7,11 +13,15 @@ export interface Producto {
   precio: number
   existencia: number
   categoria: string
+  categorias: string[]
   marca: string
   tallas: string[]
   colores: string[]
   imagenPrincipal: string | null
+  imagenPrincipalColor: string | null
+  imagenPrincipalColorHex: string | null
   imagenes: string[]
+  imagenesPorColor: ProductoImagenColor[]
   activo: boolean
   createdAt: string
   updatedAt: string
@@ -31,11 +41,15 @@ export interface ProductoPayload {
   precio: number
   existencia: number
   categoria: string
+  categorias?: string[]
   marca: string
   tallas: string[]
   colores: string[]
   imagenPrincipal?: string | null
+  imagenPrincipalColor?: string | null
+  imagenPrincipalColorHex?: string | null
   imagenes: string[]
+  imagenesPorColor?: ProductoImagenColor[]
   activo?: boolean
 }
 
@@ -62,16 +76,80 @@ const resolveImageUrl = (path: string | null | undefined) => {
   return new URL(path, `${API_URL}/`).toString()
 }
 
+const buildUniqueTextValues = (values: Array<string | null | undefined>) => {
+  const uniqueValues = new Map<string, string>()
+
+  values.forEach((value) => {
+    const normalizedValue = value?.trim() ?? ''
+
+    if (!normalizedValue) {
+      return
+    }
+
+    const normalizedKey = normalizedValue.toLowerCase()
+
+    if (!uniqueValues.has(normalizedKey)) {
+      uniqueValues.set(normalizedKey, normalizedValue)
+    }
+  })
+
+  return Array.from(uniqueValues.values())
+}
+
 const normalizeProducto = (producto: Producto): Producto => {
-  const imagenes = producto.imagenes
-    .map((image) => resolveImageUrl(image))
-    .filter((image): image is string => Boolean(image))
-  const imagenPrincipal = resolveImageUrl(producto.imagenPrincipal) ?? imagenes[0] ?? null
+  const uniqueImageAssignments = new Map<string, ProductoImagenColor>()
+  ;(producto.imagenesPorColor ?? []).forEach((item) => {
+    const imagen = resolveImageUrl(item.imagen)
+
+    if (!imagen || uniqueImageAssignments.has(imagen)) {
+      return
+    }
+
+    uniqueImageAssignments.set(imagen, {
+      ...item,
+      imagen,
+    })
+  })
+  const imagenesPorColor = Array.from(uniqueImageAssignments.values()).map(
+    (item) => {
+      const imagen = resolveImageUrl(item.imagen)
+
+      if (!imagen) {
+        return null
+      }
+
+      return {
+        ...item,
+        imagen,
+      }
+    })
+    .filter((item): item is ProductoImagenColor => Boolean(item))
+  const imagenes = Array.from(
+    new Set(
+      [
+        ...producto.imagenes
+          .map((image) => resolveImageUrl(image))
+          .filter((image): image is string => Boolean(image)),
+        ...imagenesPorColor.map((item) => item.imagen),
+      ],
+    ),
+  )
+  const imagenPrincipal =
+    resolveImageUrl(producto.imagenPrincipal) ?? imagenes[0] ?? null
 
   return {
     ...producto,
+    categoria: producto.categoria.trim(),
+    categorias:
+      producto.categorias?.length > 0
+        ? buildUniqueTextValues(producto.categorias)
+        : buildUniqueTextValues([producto.categoria]),
+    marca: producto.marca.trim(),
+    tallas: buildUniqueTextValues(producto.tallas ?? []),
+    colores: buildUniqueTextValues(producto.colores ?? []),
     imagenPrincipal,
     imagenes,
+    imagenesPorColor,
   }
 }
 

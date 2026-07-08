@@ -14,6 +14,28 @@ const decimalTransformer = {
     value === null ? null : Number(value),
 };
 
+class ProductoImagenColor {
+  @ApiProperty({
+    example: 'https://cdn.noirblanc.local/productos/vestido-midi-1.jpg',
+    description: 'URL de la imagen asociada a un color.',
+  })
+  imagen: string;
+
+  @ApiPropertyOptional({
+    example: 'Negro',
+    description: 'Color relacionado con la imagen.',
+    nullable: true,
+  })
+  color: string | null;
+
+  @ApiPropertyOptional({
+    example: '#f7a6c5',
+    description: 'Color visual hexadecimal relacionado con la imagen.',
+    nullable: true,
+  })
+  colorHex: string | null;
+}
+
 @Entity({ name: 'productos' })
 export class Producto {
   @ApiProperty({
@@ -64,6 +86,18 @@ export class Producto {
   categoria: string;
 
   @ApiProperty({
+    example: ['Hombre', 'Nuevos'],
+    description: 'Categorias multiples asociadas al producto.',
+    type: [String],
+  })
+  @Column({
+    type: 'text',
+    array: true,
+    default: () => "'{}'",
+  })
+  categorias: string[];
+
+  @ApiProperty({
     example: 'Noir & Blanc Atelier',
     description: 'Marca textual del producto.',
   })
@@ -102,6 +136,22 @@ export class Producto {
   @Column({ type: 'text', nullable: true })
   imagenPrincipal: string | null;
 
+  @ApiPropertyOptional({
+    example: 'Negro',
+    description: 'Color relacionado con la imagen principal.',
+    nullable: true,
+  })
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  imagenPrincipalColor: string | null;
+
+  @ApiPropertyOptional({
+    example: '#f7a6c5',
+    description: 'Color visual hexadecimal relacionado con la imagen principal.',
+    nullable: true,
+  })
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  imagenPrincipalColorHex: string | null;
+
   @ApiProperty({
     example: [
       'https://cdn.noirblanc.local/productos/vestido-midi-1.jpg',
@@ -116,6 +166,26 @@ export class Producto {
     default: () => "'{}'",
   })
   imagenes: string[];
+
+  @ApiProperty({
+    description: 'Relacion de imagenes adicionales con su color.',
+    type: [ProductoImagenColor],
+    example: [
+      {
+        imagen: 'https://cdn.noirblanc.local/productos/vestido-midi-1.jpg',
+        color: 'Negro',
+      },
+      {
+        imagen: 'https://cdn.noirblanc.local/productos/vestido-midi-2.jpg',
+        color: 'Marfil',
+      },
+    ],
+  })
+  @Column({
+    type: 'jsonb',
+    default: () => "'[]'::jsonb",
+  })
+  imagenesPorColor: ProductoImagenColor[];
 
   @ApiProperty({
     example: true,

@@ -28,19 +28,21 @@ export const AdminLayout = () => {
               <span aria-hidden="true">01</span>
             </NavLink>
             {isSuperUser ? (
-              <NavLink className={getLinkClassName} to="/admin/usuarios">
-                <span>Usuarios</span>
-                <span aria-hidden="true">02</span>
-              </NavLink>
+              <>
+                <NavLink className={getLinkClassName} to="/admin/usuarios">
+                  <span>Usuarios</span>
+                  <span aria-hidden="true">02</span>
+                </NavLink>
+                <NavLink className={getLinkClassName} to="/admin/productos/crear">
+                  <span>Crear producto</span>
+                  <span aria-hidden="true">03</span>
+                </NavLink>
+                <NavLink className={getLinkClassName} to="/admin/productos/editar">
+                  <span>Editar productos</span>
+                  <span aria-hidden="true">04</span>
+                </NavLink>
+              </>
             ) : null}
-            <NavLink className={getLinkClassName} to="/admin/productos/crear">
-              <span>Crear producto</span>
-              <span aria-hidden="true">{isSuperUser ? '03' : '02'}</span>
-            </NavLink>
-            <NavLink className={getLinkClassName} to="/admin/productos/editar">
-              <span>Editar productos</span>
-              <span aria-hidden="true">{isSuperUser ? '04' : '03'}</span>
-            </NavLink>
           </nav>
 
           <div className="sidebar-note">
@@ -48,7 +50,7 @@ export const AdminLayout = () => {
             <p className="muted-text">
               {isSuperUser
                 ? 'El superusuario controla las cuentas del equipo y el resto del catalogo desde modulos separados.'
-                : 'Tu cuenta puede administrar el catalogo, pero no tiene permisos de superusuario para gestionar cuentas.'}
+                : 'Tu cuenta tiene acceso limitado. Solo el primer acceso puede administrar usuarios y gestionar productos.'}
             </p>
           </div>
         </div>
@@ -65,7 +67,7 @@ export const AdminLayout = () => {
             <h1 className="panel-title">Noir & Blanc Control Room</h1>
           </div>
           <div className="small-label">
-            Sesion activa: {usuario?.email ?? 'administrador'} ·{' '}
+            Sesion activa: {usuario?.email ?? 'administrador'} |{' '}
             {usuario?.rol === 'SUPER_ADMIN' ? 'Superusuario' : 'Usuario del panel'}
           </div>
         </header>

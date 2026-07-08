@@ -29,7 +29,10 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { diskStorage } from 'multer';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { UsuarioRol } from '../usuarios/entities/usuario.entity';
 import { ActualizarProductoDto } from './dto/actualizar-producto.dto';
 import { BuscarProductosDto } from './dto/buscar-productos.dto';
 import { CrearProductoDto } from './dto/crear-producto.dto';
@@ -43,7 +46,6 @@ const allowedImageMimeTypes = new Set([
   'image/avif',
   'image/gif',
 ]);
-const maxProductImagesPerRequest = 8;
 const maxProductImageSizeInBytes = 5 * 1024 * 1024;
 
 const isSafeExtension = (value: string) => /^[.a-z0-9]+$/.test(value);
@@ -54,9 +56,10 @@ export class ProductosController {
   constructor(private readonly productosService: ProductosService) {}
 
   @Post('uploads')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UsuarioRol.SUPER_ADMIN)
   @UseInterceptors(
-    FilesInterceptor('files', maxProductImagesPerRequest, {
+    FilesInterceptor('files', undefined, {
       storage: diskStorage({
         destination: 'uploads',
         filename: (_request, file, callback) => {
@@ -126,7 +129,8 @@ export class ProductosController {
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UsuarioRol.SUPER_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Crear un producto' })
   @ApiCreatedResponse({
@@ -159,7 +163,8 @@ export class ProductosController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UsuarioRol.SUPER_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Actualizar un producto' })
   @ApiOkResponse({
@@ -174,7 +179,8 @@ export class ProductosController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UsuarioRol.SUPER_ADMIN)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Eliminar logicamente un producto' })

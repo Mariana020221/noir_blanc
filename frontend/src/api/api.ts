@@ -24,23 +24,32 @@ export const getApiErrorMessage = (
   error: unknown,
   fallback = 'Ocurrio un error inesperado.',
 ): string => {
+  return getApiErrorMessages(error, fallback).join(' ')
+}
+
+export const getApiErrorMessages = (
+  error: unknown,
+  fallback = 'Ocurrio un error inesperado.',
+): string[] => {
   if (axios.isAxiosError(error)) {
     const message = error.response?.data?.message
 
     if (Array.isArray(message)) {
-      return message.join(' ')
+      return message
+        .map((item) => String(item).trim())
+        .filter(Boolean)
     }
 
     if (typeof message === 'string') {
-      return message
+      return [message]
     }
   }
 
   if (error instanceof Error && error.message.trim()) {
-    return error.message
+    return [error.message]
   }
 
-  return fallback
+  return [fallback]
 }
 
 export default api

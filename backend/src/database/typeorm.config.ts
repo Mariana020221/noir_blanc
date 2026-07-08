@@ -17,6 +17,7 @@ const buildDataSourceOptions = (
   password: databaseConfig.password,
   database: databaseConfig.database,
   synchronize: false,
+  migrationsRun: true,
   entities: [join(__dirname, '..', 'modules', '**', '*.entity.{ts,js}')],
   migrations: [join(__dirname, 'migrations', '*.{ts,js}')],
 });

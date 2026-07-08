@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { getApiErrorMessage } from '../../api/api'
 import { useAuth } from '../../auth/AuthContext'
 import {
@@ -10,10 +10,14 @@ import {
 
 type AuthMode = 'login' | 'register'
 
-export const LoginPage = () => {
+interface LoginPageProps {
+  overlay?: boolean
+}
+
+export const LoginPage = ({ overlay = false }: LoginPageProps) => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { isAuthenticated, login } = useAuth()
+  const { isAuthenticated, isSuperUser, login } = useAuth()
   const [mode, setMode] = useState<AuthMode>('login')
   const [nombre, setNombre] = useState('')
   const [email, setEmail] = useState('')
@@ -23,14 +27,19 @@ export const LoginPage = () => {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  if (isAuthenticated) {
-    return <Navigate replace to="/admin/productos/crear" />
-  }
-
   const fromState = location.state as { from?: string } | null
-  const redirectTo = fromState?.from?.startsWith('/admin')
+  const adminRedirectTo = fromState?.from?.startsWith('/admin')
     ? fromState.from
-    : '/admin/productos/crear'
+    : '/admin'
+  const closeOverlay = () => {
+    navigate(
+      {
+        pathname: '/',
+        search: location.search,
+      },
+      { replace: true },
+    )
+  }
 
   useEffect(() => {
     let active = true
@@ -60,6 +69,10 @@ export const LoginPage = () => {
     }
   }, [])
 
+  if (isAuthenticated) {
+    return <Navigate replace to={isSuperUser ? '/admin' : '/'} />
+  }
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
@@ -86,7 +99,10 @@ export const LoginPage = () => {
         }
       }
 
-      await login({ email, password })
+      const usuario = await login({ email, password })
+      const redirectTo =
+        usuario.rol === 'SUPER_ADMIN' ? adminRedirectTo : '/'
+
       navigate(redirectTo, { replace: true })
     } catch (requestError) {
       setError(
@@ -94,9 +110,9 @@ export const LoginPage = () => {
           requestError,
           mode === 'register'
             ? canCreateFirstAdmin
-              ? 'No fue posible crear tu usuario inicial.'
-              : 'No fue posible registrar el usuario del panel.'
-            : 'No fue posible iniciar sesion con esas credenciales.',
+              ? 'No fue posible crear la cuenta inicial.'
+              : 'No fue posible crear el acceso.'
+            : 'No fue posible iniciar sesión con esas credenciales.',
         ),
       )
     } finally {
@@ -105,59 +121,80 @@ export const LoginPage = () => {
   }
 
   const registerEyebrow = canCreateFirstAdmin
-    ? 'Primer acceso'
-    : 'Registro de equipo'
+    ? 'Registro inicial'
+    : 'Nuevo acceso'
   const registerTitle = canCreateFirstAdmin
-    ? 'Crear tu usuario'
-    : 'Crear usuario del panel'
+    ? 'Crear cuenta inicial'
+    : 'Crear acceso'
   const registerDescription = canCreateFirstAdmin
-    ? 'Si aun no existe administrador, crea aqui el primer usuario y entrara al panel de productos.'
-    : 'El primer acceso ya existe. Los registros posteriores entran sin permisos de superusuario y no pueden administrar cuentas.'
+    ? 'Completa estos datos para habilitar la primera cuenta del sistema.'
+    : 'Registra aquí un nuevo acceso. Las cuentas posteriores no reciben administración total.'
+  const loginDescription =
+    'Escribe tu correo y tu contraseña para continuar.'
+  const infoCopy =
+    mode === 'register'
+      ? registerDescription
+      : 'Usa el acceso que ya fue creado para ti. Si aún no tienes cuenta, puedes registrarte desde esta misma vista.'
 
-  return (
-    <main className="login-page">
-      <div className="login-shell">
-        <section className="editorial-panel">
+  const content = (
+    <section
+      aria-modal={overlay ? true : undefined}
+      aria-labelledby="login-modal-title"
+      className={`login-modal-card${overlay ? ' login-modal-card--overlay' : ''}`}
+      role={overlay ? 'dialog' : undefined}
+    >
+      <div className="login-modal-header">
+        <div>
+          <span className="eyebrow">Acceso</span>
+          <h1 className="panel-title" id="login-modal-title">
+            Noir & Blanc
+          </h1>
+          <p className="muted-text">
+            Entra con tu cuenta o crea un acceso si todavía no lo tienes.
+          </p>
+        </div>
+
+        <button
+          className="button button--ghost"
+          onClick={closeOverlay}
+          type="button"
+        >
+          {overlay ? 'Cerrar' : 'Ver catálogo'}
+        </button>
+      </div>
+
+      <div className="login-modal-body">
+        <aside className="login-modal-aside">
           <div className="content-stack">
-            <span className="eyebrow">Acceso privado</span>
-            <h1 className="display-title">Administra el escaparate con precision serena.</h1>
-            <p className="lede">
-              El panel privado de Noir & Blanc concentra altas, edicion y control
-              visual del catalogo desde una experiencia silenciosa y refinada.
-            </p>
+            <span className="eyebrow">Cuenta</span>
+            <h2 className="display-title">Continúa con tu acceso.</h2>
           </div>
 
-          <div className="editorial-grid">
-            <article className="editorial-card">
-              <span className="small-label">Proteccion</span>
-              <p className="quote">JWT para resguardar cada cambio operativo.</p>
-            </article>
-            <article className="editorial-card">
-              <span className="small-label">Gestion</span>
-              <p className="quote">Productos y visibilidad en una sola capa.</p>
-            </article>
-          </div>
+          <article className="editorial-card login-modal-note">
+            <span className="small-label">
+              {mode === 'register' ? registerEyebrow : 'Información'}
+            </span>
+            <p className="quote">{infoCopy}</p>
+          </article>
+        </aside>
 
-          <div className="quote-source">Panel administrativo de boutique</div>
-        </section>
-
-        <section className="login-card">
+        <section className="login-card login-card--modal">
           <div>
             <span className="eyebrow">
-              {mode === 'register' ? registerEyebrow : 'Sign in'}
+              {mode === 'register' ? registerEyebrow : 'Ingreso'}
             </span>
             <h2 className="panel-title">
-              {mode === 'register' ? registerTitle : 'Iniciar sesion'}
+              {mode === 'register' ? registerTitle : 'Iniciar sesión'}
             </h2>
             <p className="muted-text">
-              {mode === 'register'
-                ? registerDescription
-                : 'Usa tu correo de administrador para acceder al modulo interno.'}
+              {mode === 'register' ? registerDescription : loginDescription}
             </p>
           </div>
 
           {checkingBootstrap ? (
-            <div className="muted-text">Verificando si el sistema necesita su primer administrador...</div>
+            <div className="muted-text">
+              Verificando disponibilidad de registro...
+            </div>
           ) : null}
 
           <div className="mode-switch" role="tablist" aria-label="Modo de acceso">
@@ -169,7 +206,7 @@ export const LoginPage = () => {
               }}
               type="button"
             >
-              Iniciar sesion
+              Iniciar sesión
             </button>
             <button
               className={`mode-button${mode === 'register' ? ' is-active' : ''}`}
@@ -179,7 +216,7 @@ export const LoginPage = () => {
               }}
               type="button"
             >
-              Crear usuario
+              Crear acceso
             </button>
           </div>
 
@@ -193,11 +230,7 @@ export const LoginPage = () => {
                   autoComplete="name"
                   className="text-input"
                   onChange={(event) => setNombre(event.target.value)}
-                  placeholder={
-                    canCreateFirstAdmin
-                      ? 'Nombre del superusuario inicial'
-                      : 'Nombre del usuario del panel'
-                  }
+                  placeholder="Nombre completo"
                   required
                   type="text"
                   value={nombre}
@@ -206,12 +239,12 @@ export const LoginPage = () => {
             ) : null}
 
             <label className="field-group">
-              <span className="field-label">Email</span>
+              <span className="field-label">Correo electrónico</span>
               <input
                 autoComplete="email"
                 className="text-input"
                 onChange={(event) => setEmail(event.target.value)}
-                placeholder="admin@noirblanc.com"
+                placeholder="correo@ejemplo.com"
                 required
                 type="email"
                 value={email}
@@ -219,7 +252,7 @@ export const LoginPage = () => {
             </label>
 
             <label className="field-group">
-              <span className="field-label">Password</span>
+              <span className="field-label">Contraseña</span>
               <input
                 autoComplete="current-password"
                 className="text-input"
@@ -241,19 +274,31 @@ export const LoginPage = () => {
                   ? 'Creando acceso...'
                   : 'Ingresando...'
                 : mode === 'register'
-                  ? 'Crear usuario y entrar'
-                  : 'Iniciar sesion'}
+                  ? 'Crear acceso y continuar'
+                  : 'Continuar'}
             </button>
           </form>
-
-          <div className="login-shortcuts">
-            <span className="small-label">Acceso rapido</span>
-            <Link className="button button--ghost" to="/">
-              Ir al catalogo publico
-            </Link>
-          </div>
         </section>
       </div>
+    </section>
+  )
+
+  if (overlay) {
+    return (
+      <div className="login-overlay" onClick={closeOverlay}>
+        <div
+          className="login-overlay-shell"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {content}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <main className="login-page">
+      <div className="login-shell">{content}</div>
     </main>
   )
 }

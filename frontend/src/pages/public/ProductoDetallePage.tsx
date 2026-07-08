@@ -1,29 +1,112 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getApiErrorMessage } from '../../api/api'
+import { getProductCategoryLabel } from '../../constants/productCategories'
 import {
   formatPrecio,
   getProductoById,
   type Producto,
 } from '../../services/productos.service'
 
-const buildGaleria = (producto: Producto | null) => {
+interface ProductoColorVariant {
+  key: string
+  label: string
+  colorHex: string
+}
+
+const normalizeColorKey = (value?: string | null) => value?.trim().toLowerCase() ?? ''
+
+const buildVariantKey = (label?: string | null, colorHex?: string | null) =>
+  `${normalizeColorKey(label)}|${(colorHex ?? '').trim().toLowerCase()}`
+
+const getProductoCategorias = (producto: Producto) =>
+  producto.categorias.length > 0
+    ? producto.categorias
+    : producto.categoria.trim()
+      ? [producto.categoria]
+      : []
+
+const buildColorVariants = (producto: Producto | null): ProductoColorVariant[] => {
   if (!producto) {
     return []
   }
 
-  return Array.from(
-    new Set(
-      [producto.imagenPrincipal, ...producto.imagenes].filter(
-        (image): image is string => Boolean(image),
-      ),
-    ),
-  )
+  const uniqueVariants = new Map<string, ProductoColorVariant>()
+  const registerVariant = (label?: string | null, colorHex?: string | null) => {
+    const normalizedHex = colorHex?.trim() || '#d2c8bc'
+    const normalizedLabel = label?.trim() || 'Tono'
+    const key = buildVariantKey(normalizedLabel, normalizedHex)
+
+    if (!uniqueVariants.has(key)) {
+      uniqueVariants.set(key, {
+        key,
+        label: normalizedLabel,
+        colorHex: normalizedHex,
+      })
+    }
+  }
+
+  if (producto.imagenPrincipalColor || producto.imagenPrincipalColorHex) {
+    registerVariant(producto.imagenPrincipalColor, producto.imagenPrincipalColorHex)
+  }
+
+  producto.imagenesPorColor.forEach((image) => {
+    if (image.color || image.colorHex) {
+      registerVariant(image.color, image.colorHex)
+    }
+  })
+
+  return Array.from(uniqueVariants.values())
+}
+
+const buildGaleria = (
+  producto: Producto | null,
+  selectedVariantKey: string | null,
+) => {
+  if (!producto) {
+    return []
+  }
+
+  const hasColorRelations =
+    Boolean(producto.imagenPrincipalColor?.trim()) ||
+    Boolean(producto.imagenPrincipalColorHex?.trim()) ||
+    producto.imagenesPorColor.length > 0
+  const matchesSelectedVariant = (
+    label?: string | null,
+    colorHex?: string | null,
+  ) =>
+    !selectedVariantKey ||
+    buildVariantKey(label, colorHex) === selectedVariantKey
+
+  const galleryImages: string[] = []
+
+  if (
+    producto.imagenPrincipal &&
+    matchesSelectedVariant(
+      producto.imagenPrincipalColor,
+      producto.imagenPrincipalColorHex,
+    )
+  ) {
+    galleryImages.push(producto.imagenPrincipal)
+  }
+
+  if (hasColorRelations) {
+    galleryImages.push(
+      ...producto.imagenesPorColor
+        .filter((image) => matchesSelectedVariant(image.color, image.colorHex))
+        .map((image) => image.imagen),
+    )
+  } else {
+    galleryImages.push(...producto.imagenes)
+  }
+
+  return Array.from(new Set(galleryImages.filter(Boolean)))
 }
 
 export const ProductoDetallePage = () => {
   const { id } = useParams()
   const [producto, setProducto] = useState<Producto | null>(null)
+  const [selectedVariantKey, setSelectedVariantKey] = useState<string | null>(null)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [selectedImageHasError, setSelectedImageHasError] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -45,9 +128,8 @@ export const ProductoDetallePage = () => {
         const response = await getProductoById(productoId)
 
         if (active) {
-          const galeria = buildGaleria(response)
           setProducto(response)
-          setSelectedImage(galeria[0] ?? null)
+          setSelectedVariantKey(null)
           setError(null)
         }
       } catch (requestError) {
@@ -77,7 +159,26 @@ export const ProductoDetallePage = () => {
     setSelectedImageHasError(false)
   }, [selectedImage])
 
-  const galeria = buildGaleria(producto)
+  const galeria = useMemo(
+    () => buildGaleria(producto, selectedVariantKey),
+    [producto, selectedVariantKey],
+  )
+  const colorVariants = useMemo(() => buildColorVariants(producto), [producto])
+  const selectedVariant = colorVariants.find(
+    (variant) => variant.key === selectedVariantKey,
+  )
+  const categorias = producto ? getProductoCategorias(producto) : []
+
+  useEffect(() => {
+    if (galeria.length === 0) {
+      setSelectedImage(null)
+      return
+    }
+
+    setSelectedImage((current) =>
+      current && galeria.includes(current) ? current : galeria[0],
+    )
+  }, [galeria])
 
   if (loading) {
     return (
@@ -110,13 +211,13 @@ export const ProductoDetallePage = () => {
   }
 
   return (
-    <div className="content-stack">
+    <div className="content-stack detail-page-shell">
       <Link className="back-link" to="/">
         Volver al catalogo
       </Link>
 
       <section className="detail-grid">
-        <article>
+        <article className="detail-gallery-column">
           <div className="detail-media">
             {selectedImage && !selectedImageHasError ? (
               <img
@@ -128,6 +229,34 @@ export const ProductoDetallePage = () => {
               <div className="media-fallback">Noir & Blanc</div>
             )}
           </div>
+
+          {colorVariants.length > 0 ? (
+            <div className="detail-color-switcher">
+              <button
+                className={`filter-chip${selectedVariantKey === null ? ' is-active' : ''}`}
+                onClick={() => setSelectedVariantKey(null)}
+                type="button"
+              >
+                Todas las vistas
+              </button>
+              {colorVariants.map((variant) => (
+                <button
+                  className={`detail-swatch-button${
+                    selectedVariantKey === variant.key ? ' is-active' : ''
+                  }`}
+                  key={variant.key}
+                  onClick={() => setSelectedVariantKey(variant.key)}
+                  type="button"
+                >
+                  <span
+                    className="detail-swatch-dot"
+                    style={{ backgroundColor: variant.colorHex }}
+                  />
+                  <span>{variant.label}</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
 
           {galeria.length > 1 ? (
             <div className="detail-thumbs">
@@ -148,16 +277,23 @@ export const ProductoDetallePage = () => {
         </article>
 
         <aside className="detail-panel detail-stack">
-          <div>
+          <div className="detail-heading-block">
             <span className="eyebrow">Detalle de producto</span>
             <h1 className="detail-name">{producto.nombre}</h1>
             <div className="detail-price">{formatPrecio(producto.precio)}</div>
           </div>
 
-          <p className="lede">{producto.descripcion}</p>
+          <p className="lede">
+            <span className="detail-id-copy">ID del producto #{producto.id}</span>
+            {producto.descripcion}
+          </p>
 
           <div className="detail-meta-row">
-            <span className="meta-chip">{producto.categoria}</span>
+            {categorias.map((categoria) => (
+              <span className="meta-chip" key={categoria}>
+                {getProductCategoryLabel(categoria)}
+              </span>
+            ))}
             <span className="meta-chip">{producto.marca}</span>
             <span
               className={`status-chip ${
@@ -166,6 +302,9 @@ export const ProductoDetallePage = () => {
             >
               {producto.activo ? 'Disponible' : 'No disponible'}
             </span>
+            {selectedVariant ? (
+              <span className="meta-chip">Vista {selectedVariant.label}</span>
+            ) : null}
           </div>
 
           <div className="surface-card">

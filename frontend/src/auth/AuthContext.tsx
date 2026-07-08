@@ -19,7 +19,7 @@ interface AuthContextValue {
   token: string | null
   isAuthenticated: boolean
   isSuperUser: boolean
-  login: (credentials: LoginDto) => Promise<void>
+  login: (credentials: LoginDto) => Promise<UsuarioAuth>
   logout: () => void
 }
 
@@ -35,6 +35,8 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     persistAuthSession(response)
     setUsuario(response.usuario)
     setToken(response.accessToken)
+
+    return response.usuario
   }
 
   const logout = () => {

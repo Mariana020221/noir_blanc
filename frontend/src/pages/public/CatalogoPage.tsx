@@ -1,18 +1,85 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useDeferredValue, useEffect, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { getApiErrorMessage } from '../../api/api'
+import {
+  ALL_PRODUCT_CATEGORIES_VALUE,
+  normalizeProductCategory,
+} from '../../constants/productCategories'
 import {
   formatPrecio,
   getProductos,
   type Producto,
 } from '../../services/productos.service'
 
+const buildSearchableText = (producto: Producto) =>
+  [
+    producto.nombre,
+    producto.descripcion,
+    producto.categoria,
+    ...producto.categorias,
+    producto.marca,
+    ...producto.colores,
+    ...producto.tallas,
+  ]
+    .join(' ')
+    .toLowerCase()
+
+const getProductoCategorias = (producto: Producto) =>
+  producto.categorias.length > 0
+    ? producto.categorias
+    : producto.categoria.trim()
+      ? [producto.categoria]
+      : []
+
+const resolveColorSwatch = (color: string) => {
+  const normalizedColor = color.trim().toLowerCase()
+
+  if (normalizedColor.includes('negro') || normalizedColor.includes('black')) {
+    return '#181614'
+  }
+
+  if (
+    normalizedColor.includes('blanco') ||
+    normalizedColor.includes('white') ||
+    normalizedColor.includes('marfil') ||
+    normalizedColor.includes('ivory')
+  ) {
+    return '#efe5d7'
+  }
+
+  if (normalizedColor.includes('beige') || normalizedColor.includes('camel')) {
+    return '#c7ab8d'
+  }
+
+  if (normalizedColor.includes('cafe') || normalizedColor.includes('brown')) {
+    return '#86654b'
+  }
+
+  if (normalizedColor.includes('gris') || normalizedColor.includes('gray')) {
+    return '#a1a09c'
+  }
+
+  if (normalizedColor.includes('verde') || normalizedColor.includes('green')) {
+    return '#8a9477'
+  }
+
+  if (normalizedColor.includes('azul') || normalizedColor.includes('blue')) {
+    return '#6c7a92'
+  }
+
+  if (normalizedColor.includes('rojo') || normalizedColor.includes('red')) {
+    return '#995e58'
+  }
+
+  return '#d2c8bc'
+}
+
 const ProductMedia = ({
-  src,
   alt,
+  src,
 }: {
-  src: string | null
   alt: string
+  src: string | null
 }) => {
   const [hasError, setHasError] = useState(false)
 
@@ -31,10 +98,43 @@ const ProductMedia = ({
   )
 }
 
+const CatalogColorDots = ({ colors }: { colors: string[] }) => {
+  const visibleColors = colors.slice(0, 4)
+
+  if (visibleColors.length === 0) {
+    return <p className="catalog-color-summary-text">Sin colores registrados</p>
+  }
+
+  return (
+    <div className="catalog-color-summary">
+      <div className="catalog-color-dots" aria-label="Colores disponibles">
+        {visibleColors.map((color, index) => (
+          <span
+            className="color-dot"
+            key={`${color}-${index}`}
+            style={{ backgroundColor: resolveColorSwatch(color) }}
+            title={color}
+          />
+        ))}
+      </div>
+      <span className="catalog-color-summary-text">
+        {colors.length === 1 ? '1 color disponible' : `${colors.length} colores disponibles`}
+      </span>
+    </div>
+  )
+}
+
 export const CatalogoPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [productos, setProductos] = useState<Producto[]>([])
+  const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const deferredSearchTerm = useDeferredValue(searchTerm.trim().toLowerCase())
+  const selectedCategory = normalizeProductCategory(
+    searchParams.get('categoria') ?? ALL_PRODUCT_CATEGORIES_VALUE,
+  )
+  const selectedBrand = searchParams.get('marca')?.trim() ?? ''
 
   useEffect(() => {
     let active = true
@@ -71,104 +171,127 @@ export const CatalogoPage = () => {
     }
   }, [])
 
+  const filteredProducts = [...productos]
+    .filter((producto) => {
+      if (
+        selectedCategory !== ALL_PRODUCT_CATEGORIES_VALUE &&
+        !getProductoCategorias(producto).some(
+          (categoria) => normalizeProductCategory(categoria) === selectedCategory,
+        )
+      ) {
+        return false
+      }
+
+      if (
+        selectedBrand &&
+        producto.marca.trim().toLowerCase() !== selectedBrand.trim().toLowerCase()
+      ) {
+        return false
+      }
+
+      if (
+        deferredSearchTerm &&
+        !buildSearchableText(producto).includes(deferredSearchTerm)
+      ) {
+        return false
+      }
+
+      return true
+    })
+    .sort((left, right) => right.id - left.id)
+
+  const hasActiveFilters =
+    selectedCategory !== ALL_PRODUCT_CATEGORIES_VALUE ||
+    selectedBrand !== '' ||
+    searchTerm.trim().length > 0
+
+  const clearFilters = () => {
+    setSearchTerm('')
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.delete('categoria')
+    nextParams.delete('marca')
+    setSearchParams(nextParams, { replace: true })
+  }
+
   return (
-    <div className="content-stack">
-      <section className="hero-banner">
-        <article className="hero-copy">
-          <span className="eyebrow">Coleccion curada</span>
-          <h1 className="display-title">Moda serena para una presencia impecable.</h1>
-          <p className="lede">
-            Un catalogo limpio, sobrio y contemporaneo para presentar prendas,
-            texturas y siluetas con enfoque editorial. Todo el flujo conecta
-            directamente con tu API de NestJS.
-          </p>
+    <section className="catalog-stage">
+      <div className="catalog-toolbar">
+        <label className="catalog-search-inline">
+          <span className="catalog-search-icon" aria-hidden="true" />
+          <input
+            className="catalog-search-input"
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Busca por nombre, marca, color o talla"
+            type="search"
+            value={searchTerm}
+          />
+        </label>
+      </div>
 
-          <div className="hero-meta">
-            <div className="hero-stat">
-              <strong>{productos.length}</strong>
-              <span>Piezas visibles</span>
-            </div>
-            <div className="hero-stat">
-              <strong>
-                {new Set(productos.map((producto) => producto.categoria)).size}
-              </strong>
-              <span>Categorias</span>
-            </div>
-            <div className="hero-stat">
-              <strong>{new Set(productos.map((producto) => producto.marca)).size}</strong>
-              <span>Marcas</span>
-            </div>
-          </div>
-        </article>
-
-        <aside className="hero-aside">
-          <div>
-            <span className="eyebrow">Atmosfera boutique</span>
-            <p className="quote">
-              "Menos ruido, mejor seleccion. El producto respira y la marca se
-              percibe premium."
-            </p>
-          </div>
-          <div className="quote-source">Noir & Blanc Studio Notes</div>
-        </aside>
-      </section>
-
-      <section>
-        <div className="section-heading">
-          <div>
-            <h2>Catalogo publico</h2>
-            <p>
-              Explora el inventario disponible. Los detalles completos se abren en
-              una ficha individual.
-            </p>
-          </div>
-          <span className="small-label">Sin checkout, solo exhibicion</span>
-        </div>
-
-        {error ? <div className="alert alert--error">{error}</div> : null}
-
-        {loading ? (
-          <div className="loading-grid" aria-label="Cargando productos">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <div className="skeleton-card" key={index} />
-            ))}
-          </div>
-        ) : productos.length === 0 ? (
-          <div className="empty-state">
-            Aun no hay productos activos publicados en el catalogo.
-          </div>
+      <div className="catalog-results-bar">
+        <span className="small-label">
+          {filteredProducts.length} resultados visibles
+        </span>
+        {hasActiveFilters ? (
+          <button
+            className="button button--ghost"
+            onClick={clearFilters}
+            type="button"
+          >
+            Limpiar filtros
+          </button>
         ) : (
-          <div className="catalog-grid">
-            {productos.map((producto) => (
-              <Link
-                className="catalog-card"
-                key={producto.id}
-                to={`/producto/${producto.id}`}
-              >
-                <ProductMedia alt={producto.nombre} src={producto.imagenPrincipal} />
-
-                <div className="catalog-body">
-                  <p className="small-label">{producto.categoria}</p>
-                  <h3 className="catalog-name">{producto.nombre}</h3>
-                  <p className="catalog-description">{producto.descripcion}</p>
-
-                  <div className="catalog-meta-row">
-                    <span className="meta-chip">{producto.marca}</span>
-                    <span className="meta-chip">
-                      {producto.existencia} disponibles
-                    </span>
-                  </div>
-
-                  <div className="catalog-footer">
-                    <div className="product-price">{formatPrecio(producto.precio)}</div>
-                    <span className="small-label">Ver detalle</span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+          <span className="small-label">Sin checkout, solo exhibicion</span>
         )}
-      </section>
-    </div>
+      </div>
+
+      {error ? <div className="alert alert--error">{error}</div> : null}
+
+      {loading ? (
+        <div className="loading-grid" aria-label="Cargando productos">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <div className="skeleton-card" key={index} />
+          ))}
+        </div>
+      ) : filteredProducts.length === 0 ? (
+        <div className="empty-state">
+          <p>No encontramos piezas con esa combinacion de filtros.</p>
+          <button
+            className="button button--ghost"
+            onClick={clearFilters}
+            type="button"
+          >
+            Mostrar todo el catalogo
+          </button>
+        </div>
+      ) : (
+        <div className="catalog-grid catalog-grid--editorial">
+          {filteredProducts.map((producto) => (
+            <Link
+              className="catalog-card catalog-card--editorial"
+              key={producto.id}
+              to={`/producto/${producto.id}`}
+            >
+              <div className="catalog-card-visual">
+                <ProductMedia alt={producto.nombre} src={producto.imagenPrincipal} />
+              </div>
+
+              <div className="catalog-body catalog-body--editorial">
+                <h3 className="catalog-name">{producto.nombre}</h3>
+
+                <div className="catalog-price-row">
+                  <div className="product-price">{formatPrecio(producto.precio)}</div>
+                </div>
+
+                <div className="catalog-colors-block">
+                  <span className="small-label">Colores disponibles</span>
+                  <CatalogColorDots colors={producto.colores} />
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </section>
   )
 }

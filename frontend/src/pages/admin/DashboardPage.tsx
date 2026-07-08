@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../../auth/AuthContext'
 import { getApiErrorMessage } from '../../api/api'
+import { getProductCategoryLabel } from '../../constants/productCategories'
 import {
   formatPrecio,
   getProductos,
@@ -8,6 +10,7 @@ import {
 } from '../../services/productos.service'
 
 export const DashboardPage = () => {
+  const { isSuperUser } = useAuth()
   const [productos, setProductos] = useState<Producto[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -59,9 +62,11 @@ export const DashboardPage = () => {
           <h2>Dashboard</h2>
           <p>Panorama rapido del catalogo y la visibilidad actual de la tienda.</p>
         </div>
-        <Link className="button button--secondary" to="/admin/productos/crear">
-          Crear productos
-        </Link>
+        {isSuperUser ? (
+          <Link className="button button--secondary" to="/admin/productos/crear">
+            Crear productos
+          </Link>
+        ) : null}
       </section>
 
       {error ? <div className="alert alert--error">{error}</div> : null}
@@ -158,7 +163,9 @@ export const DashboardPage = () => {
                     )}
                   </div>
                   <div>
-                    <p className="small-label">{producto.categoria}</p>
+                    <p className="small-label">
+                      {getProductCategoryLabel(producto.categoria)}
+                    </p>
                     <h3 className="catalog-name">{producto.nombre}</h3>
                     <div className="admin-product-meta">
                       <span className="meta-chip">{producto.marca}</span>

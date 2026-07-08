@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { Producto } from './entities/producto.entity';
 import { ProductosController } from './productos.controller';
 import { ProductosService } from './productos.service';
@@ -7,7 +8,7 @@ import { ProductosService } from './productos.service';
 @Module({
   imports: [TypeOrmModule.forFeature([Producto])],
   controllers: [ProductosController],
-  providers: [ProductosService],
+  providers: [ProductosService, RolesGuard],
   exports: [ProductosService],
 })
 export class ProductosModule {}

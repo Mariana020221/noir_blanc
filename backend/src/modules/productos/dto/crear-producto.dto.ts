@@ -1,4 +1,4 @@
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayUnique,
   IsArray,
@@ -9,8 +9,10 @@ import {
   IsUrl,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ImagenProductoColorDto } from './imagen-producto-color.dto';
 import { toBoolean, toInteger, toNumber } from './producto-dto.transforms';
 
 export class CrearProductoDto {
@@ -61,6 +63,17 @@ export class CrearProductoDto {
   @MaxLength(100)
   categoria: string;
 
+  @ApiPropertyOptional({
+    example: ['HOMBRE', 'NUEVOS'],
+    description: 'Categorias multiples asociadas al producto.',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
+  categorias?: string[];
+
   @ApiProperty({
     example: 'Noir & Blanc Atelier',
     description: 'Marca textual asociada al producto.',
@@ -101,6 +114,26 @@ export class CrearProductoDto {
   imagenPrincipal?: string;
 
   @ApiPropertyOptional({
+    example: 'Negro',
+    description: 'Color relacionado con la imagen principal.',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  imagenPrincipalColor?: string | null;
+
+  @ApiPropertyOptional({
+    example: '#f7a6c5',
+    description: 'Color visual hexadecimal relacionado con la imagen principal.',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  imagenPrincipalColorHex?: string | null;
+
+  @ApiPropertyOptional({
     example: [
       'https://cdn.noirblanc.local/productos/vestido-midi-1.jpg',
       'https://cdn.noirblanc.local/productos/vestido-midi-2.jpg',
@@ -114,6 +147,16 @@ export class CrearProductoDto {
   @IsUrl({ require_tld: false }, { each: true })
   @MaxLength(500, { each: true })
   imagenes?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Relaciona cada imagen adicional con el color mostrado.',
+    type: [ImagenProductoColorDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ImagenProductoColorDto)
+  imagenesPorColor?: ImagenProductoColorDto[];
 
   @ApiPropertyOptional({
     example: true,
