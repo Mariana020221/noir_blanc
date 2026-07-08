@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   preview: {
     allowedHosts: [
-      'devoted-creation-production-e68b.up.railway.app',
+      'noirandblanc.up.railway.app',
     ],
   },
 });
