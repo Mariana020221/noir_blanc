@@ -15,7 +15,8 @@ async function bootstrap() {
   const frontendUrl =
     configService.get<string>('frontendUrl') ?? 'http://localhost:5173';
 
-  const uploadsPath = join(process.cwd(), 'uploads');
+ const uploadsPath =
+  process.env.UPLOADS_PATH ?? join(process.cwd(), 'uploads');
 
   console.log('================================');
   console.log('NODE_ENV:', process.env.NODE_ENV);
