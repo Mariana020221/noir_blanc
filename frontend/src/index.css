@@ -2289,7 +2289,7 @@ img {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: auto;
+  overflow: hidden;
   padding: clamp(12px, 2.8vw, 28px);
   background: rgba(18, 17, 15, 0.42);
   backdrop-filter: blur(8px);
@@ -2335,6 +2335,7 @@ img {
 
 .admin-modal-body {
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 8px 24px 20px;
   scrollbar-width: none;
 }

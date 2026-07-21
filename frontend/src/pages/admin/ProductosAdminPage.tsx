@@ -1160,6 +1160,19 @@ const AdminModal = ({
     bodyRef.current?.scrollTo({ top: 0, behavior: 'auto' })
   }, [])
 
+  useEffect(() => {
+    const previousBodyOverflow = document.body.style.overflow
+    const previousHtmlOverflow = document.documentElement.style.overflow
+
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow
+      document.documentElement.style.overflow = previousHtmlOverflow
+    }
+  }, [])
+
   if (typeof document === 'undefined') {
     return null
   }
@@ -1635,19 +1648,6 @@ const ProductosAdminPage = ({ mode }: ProductosAdminPageProps) => {
       setSearchParams(nextParams, { replace: true })
     }
   }, [searchParams, setSearchParams])
-
-  useEffect(() => {
-    if (mode !== 'editar' || !editingId) {
-      return
-    }
-
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-
-    return () => {
-      document.body.style.overflow = previousOverflow
-    }
-  }, [editingId, mode])
 
   useEffect(() => {
     if (mode !== 'editar' || !editingId) {
