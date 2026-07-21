@@ -5,6 +5,7 @@ import { getApiErrorMessage } from '../../api/api'
 import {
   createUsuario,
   getUsuarios,
+  updateUsuarioPassword,
   type UsuarioAdmin,
 } from '../../services/usuarios.service'
 
@@ -14,10 +15,20 @@ interface UsuarioFormState {
   password: string
 }
 
+interface PasswordResetFormState {
+  password: string
+  confirmPassword: string
+}
+
 const createEmptyFormState = (): UsuarioFormState => ({
   nombre: '',
   email: '',
   password: '',
+})
+
+const createEmptyPasswordResetFormState = (): PasswordResetFormState => ({
+  password: '',
+  confirmPassword: '',
 })
 
 const formatUserDate = (value: string) =>
@@ -30,8 +41,15 @@ export const UsuariosAdminPage = () => {
   const { isSuperUser } = useAuth()
   const [usuarios, setUsuarios] = useState<UsuarioAdmin[]>([])
   const [form, setForm] = useState<UsuarioFormState>(createEmptyFormState)
+  const [passwordForm, setPasswordForm] = useState<PasswordResetFormState>(
+    createEmptyPasswordResetFormState,
+  )
+  const [editingPasswordUserId, setEditingPasswordUserId] = useState<number | null>(
+    null,
+  )
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [savingPassword, setSavingPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -86,6 +104,11 @@ export const UsuariosAdminPage = () => {
     setForm(createEmptyFormState())
   }
 
+  const resetPasswordForm = () => {
+    setPasswordForm(createEmptyPasswordResetFormState())
+    setEditingPasswordUserId(null)
+  }
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
@@ -122,6 +145,75 @@ export const UsuariosAdminPage = () => {
       )
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handlePasswordInputChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const { name, value } = event.target
+
+    setPasswordForm((current) => ({
+      ...current,
+      [name]: value,
+    }))
+  }
+
+  const handleOpenPasswordEditor = (usuarioId: number) => {
+    setError(null)
+    setEditingPasswordUserId((current) => (current === usuarioId ? null : usuarioId))
+    setPasswordForm(createEmptyPasswordResetFormState())
+  }
+
+  const handlePasswordSubmit = async (
+    event: React.FormEvent<HTMLFormElement>,
+    usuario: UsuarioAdmin,
+  ) => {
+    event.preventDefault()
+
+    if (!isSuperUser) {
+      setError('Solo el superusuario puede crear o administrar cuentas.')
+      return
+    }
+
+    if (passwordForm.password.length < 8) {
+      setError('La nueva contrasena debe tener al menos 8 caracteres.')
+      return
+    }
+
+    if (passwordForm.password !== passwordForm.confirmPassword) {
+      setError('La confirmacion de la contrasena no coincide.')
+      return
+    }
+
+    try {
+      setSavingPassword(true)
+      const updated = await updateUsuarioPassword(usuario.id, {
+        password: passwordForm.password,
+      })
+
+      setUsuarios((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item)),
+      )
+      setError(null)
+      resetPasswordForm()
+      await Swal.fire({
+        icon: 'success',
+        title: 'Contrasena actualizada',
+        text: `La cuenta de ${updated.nombre} ya tiene una nueva contrasena.`,
+        confirmButtonText: 'Continuar',
+        background: '#fffdf9',
+        confirmButtonColor: '#1d1a17',
+      })
+    } catch (requestError) {
+      setError(
+        getApiErrorMessage(
+          requestError,
+          'No fue posible actualizar la contrasena del usuario.',
+        ),
+      )
+    } finally {
+      setSavingPassword(false)
     }
   }
 
@@ -276,7 +368,86 @@ export const UsuariosAdminPage = () => {
                       <span className="meta-chip">
                         Alta {formatUserDate(usuario.createdAt)}
                       </span>
+                      <span className="meta-chip">
+                        Actualizado {formatUserDate(usuario.updatedAt)}
+                      </span>
                     </div>
+
+                    <div className="admin-user-actions">
+                      <button
+                        className="button button--secondary"
+                        disabled={savingPassword}
+                        onClick={() => handleOpenPasswordEditor(usuario.id)}
+                        type="button"
+                      >
+                        {editingPasswordUserId === usuario.id
+                          ? 'Cancelar cambio'
+                          : 'Cambiar contrasena'}
+                      </button>
+                    </div>
+
+                    {editingPasswordUserId === usuario.id ? (
+                      <div className="admin-user-password-panel">
+                        <p className="admin-form-caption">
+                          Define una nueva contrasena para este acceso del panel.
+                        </p>
+
+                        <form
+                          className="auth-form"
+                          onSubmit={(event) => void handlePasswordSubmit(event, usuario)}
+                        >
+                          <div className="form-grid">
+                            <label className="field-group">
+                              <span className="field-label">Nueva contrasena</span>
+                              <input
+                                className="text-input"
+                                minLength={8}
+                                name="password"
+                                onChange={handlePasswordInputChange}
+                                placeholder="Minimo 8 caracteres"
+                                required
+                                type="password"
+                                value={passwordForm.password}
+                              />
+                            </label>
+
+                            <label className="field-group">
+                              <span className="field-label">
+                                Confirmar contrasena
+                              </span>
+                              <input
+                                className="text-input"
+                                minLength={8}
+                                name="confirmPassword"
+                                onChange={handlePasswordInputChange}
+                                placeholder="Repite la nueva contrasena"
+                                required
+                                type="password"
+                                value={passwordForm.confirmPassword}
+                              />
+                            </label>
+                          </div>
+
+                          <div className="inline-actions">
+                            <button
+                              className="button button--primary"
+                              disabled={savingPassword}
+                              type="submit"
+                            >
+                              {savingPassword ? 'Guardando...' : 'Guardar contrasena'}
+                            </button>
+                            <button
+                              className="button button--ghost"
+                              disabled={savingPassword}
+                              onClick={resetPasswordForm}
+                              type="button"
+                            >
+                              Cerrar
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    ) : null}
                   </article>
                 ))}
               </div>

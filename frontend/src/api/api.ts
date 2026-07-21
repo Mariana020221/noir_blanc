@@ -1,6 +1,11 @@
 import axios from 'axios'
 
-export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+const rawApiUrl =
+  typeof import.meta.env.VITE_API_URL === 'string'
+    ? import.meta.env.VITE_API_URL.trim()
+    : ''
+
+export const API_URL = rawApiUrl || 'http://localhost:3000'
 export const AUTH_TOKEN_STORAGE_KEY = 'noir-blanc.auth.token'
 
 const api = axios.create({

@@ -1,16 +1,14 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 
 const getLinkClassName = ({ isActive }: { isActive: boolean }) =>
   `sidebar-link${isActive ? ' is-active' : ''}`
 
 export const AdminLayout = () => {
-  const navigate = useNavigate()
   const { isSuperUser, logout, usuario } = useAuth()
 
   const handleLogout = () => {
-    logout()
-    navigate('/login', { replace: true })
+    logout('/')
   }
 
   return (
@@ -18,7 +16,7 @@ export const AdminLayout = () => {
       <aside className="admin-sidebar">
         <div className="content-stack">
           <div className="sidebar-copy">
-            <div className="brand-mark">Noir & Blanc</div>
+            <div className="brand-mark">Noir&Blanc</div>
             <div className="brand-subtitle">Back office de boutique</div>
           </div>
 
@@ -64,7 +62,7 @@ export const AdminLayout = () => {
         <header className="admin-header">
           <div>
             <span className="eyebrow">Admin protegido</span>
-            <h1 className="panel-title">Noir & Blanc Control Room</h1>
+            <h1 className="panel-title">Noir&Blanc Control Room</h1>
           </div>
           <div className="small-label">
             Sesion activa: {usuario?.email ?? 'administrador'} |{' '}

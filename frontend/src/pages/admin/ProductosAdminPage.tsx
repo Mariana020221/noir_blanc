@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import Swal from 'sweetalert2'
@@ -212,6 +220,13 @@ const dedupeTrimmedList = (items: Array<string | null | undefined>) => {
 
 const sortUniqueLabels = (items: Array<string | null | undefined>) =>
   dedupeTrimmedList(items).sort((left, right) => left.localeCompare(right))
+
+const normalizeSearchTokens = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
 
 const normalizeSecondaryImages = (
   items: Array<string | null | undefined>,
@@ -1470,6 +1485,7 @@ const ProductosAdminPage = ({ mode }: ProductosAdminPageProps) => {
   const [createForm, setCreateForm] = useState<ProductoFormState>(createEmptyFormState)
   const [editForm, setEditForm] = useState<ProductoFormState | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
+  const [productSearch, setProductSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [createSaving, setCreateSaving] = useState(false)
   const [editSaving, setEditSaving] = useState(false)
@@ -1489,10 +1505,36 @@ const ProductosAdminPage = ({ mode }: ProductosAdminPageProps) => {
   const editPreviewRef = useRef(editPreviewState)
   const [feedback, setFeedback] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const deferredProductSearch = useDeferredValue(productSearch)
   const brandSuggestions = useMemo(
     () => sortUniqueLabels(productos.map((producto) => producto.marca)),
     [productos],
   )
+  const filteredProductos = useMemo(() => {
+    const searchTokens = normalizeSearchTokens(deferredProductSearch)
+
+    if (searchTokens.length === 0) {
+      return productos
+    }
+
+    return productos.filter((producto) => {
+      const searchableText = [
+        producto.nombre,
+        producto.descripcion,
+        producto.marca,
+        producto.categoria,
+        ...producto.categorias,
+        ...producto.tallas,
+        ...producto.colores,
+        producto.imagenPrincipalColor ?? '',
+        ...producto.imagenesPorColor.map((image) => image.color ?? ''),
+      ]
+        .join(' ')
+        .toLowerCase()
+
+      return searchTokens.every((token) => searchableText.includes(token))
+    })
+  }, [deferredProductSearch, productos])
 
   useEffect(() => {
     createFormRef.current = createForm
@@ -2080,7 +2122,6 @@ const ProductosAdminPage = ({ mode }: ProductosAdminPageProps) => {
           producto.id === updated.id ? updated : producto,
         ),
       )
-      setEditForm(mapProductoToForm(updated))
       setFeedback(null)
       setError(null)
       await Swal.fire({
@@ -2091,6 +2132,7 @@ const ProductosAdminPage = ({ mode }: ProductosAdminPageProps) => {
         background: '#fffdf9',
         confirmButtonColor: '#1d1a17',
       })
+      resetEditForm()
     } catch (requestError) {
       const messages = await showRequestErrorAlert(
         'No se pudo guardar la edicion',
@@ -2112,33 +2154,52 @@ const ProductosAdminPage = ({ mode }: ProductosAdminPageProps) => {
     mode === 'editar'
       ? 'Selecciona un producto del catalogo y abre su edicion en una ventana central, sin panel lateral.'
       : ''
-  const listTitle = 'Catalogo editable'
-  const listHelper =
-    mode === 'editar'
-      ? 'Selecciona un producto para abrir su editor en modal y ajustar sus datos.'
-      : 'Selecciona un producto para cargarlo en el editor y ajustar sus datos.'
 
   return (
     <div className="content-stack">
-      <section className="section-heading">
-        <div>
-          <h2>{pageTitle}</h2>
-          {pageDescription ? <p>{pageDescription}</p> : null}
-        </div>
-        <div className="admin-toolbar-meta">
+      <section className="section-heading section-heading--admin-products">
+        <div className="admin-heading-top">
+          <div className="admin-heading-copy">
+            <h2>{pageTitle}</h2>
+            {pageDescription ? (
+              <p className="admin-heading-description">{pageDescription}</p>
+            ) : null}
+          </div>
           {mode === 'editar' ? (
-            editingId ? (
-              <span className="status-chip is-active">Editando ID {editingId}</span>
-            ) : (
-              <span className="status-chip">Selecciona un producto</span>
-            )
+            <div className="admin-toolbar-meta">
+              <button
+                className="status-chip status-chip--action"
+                onClick={() => navigate('/')}
+                type="button"
+              >
+                Ver catalogo
+              </button>
+              <span className="small-label">
+                {loading
+                  ? 'Actualizando...'
+                  : `${filteredProductos.length} de ${productos.length} visibles`}
+              </span>
+            </div>
           ) : (
-            <span className="status-chip is-active">Modulo de alta</span>
+            <div className="admin-toolbar-meta">
+              <span className="status-chip is-active">Modulo de alta</span>
+            </div>
           )}
-          {mode === 'editar' ? (
-            <span className="small-label">{productos.length} registrados</span>
-          ) : null}
         </div>
+
+        {mode === 'editar' ? (
+          <label className="admin-search-bar">
+            <span aria-hidden="true" className="admin-search-bar__icon" />
+            <input
+              aria-label="Buscar producto"
+              className="admin-search-bar__input"
+              onChange={(event) => setProductSearch(event.target.value)}
+              placeholder="Busca por nombre, marca, color o talla"
+              type="search"
+              value={productSearch}
+            />
+          </label>
+        ) : null}
       </section>
 
       {error ? <div className="alert alert--error">{error}</div> : null}
@@ -2146,7 +2207,7 @@ const ProductosAdminPage = ({ mode }: ProductosAdminPageProps) => {
 
       <section className="admin-products-workspace admin-products-workspace--create">
         <article
-          className={`admin-card admin-card--sticky${
+          className={`admin-card admin-card--editor-shell${
             mode === 'editar' ? ' admin-card--hidden' : ''
           }`}
         >
@@ -2164,7 +2225,10 @@ const ProductosAdminPage = ({ mode }: ProductosAdminPageProps) => {
                 relaciones visuales por color desde un mismo formulario.
               </p>
 
-              <form className="product-form" onSubmit={handleCreateSubmit}>
+              <form
+                className="product-form product-form--compact"
+                onSubmit={handleCreateSubmit}
+              >
                 <ProductoFormFields
                   brandSuggestions={brandSuggestions}
                   form={createForm}
@@ -2238,7 +2302,10 @@ const ProductosAdminPage = ({ mode }: ProductosAdminPageProps) => {
                     aislada en su propia ruta del panel.
                   </p>
 
-                  <form className="product-form" onSubmit={handleEditSubmit}>
+                  <form
+                    className="product-form product-form--compact"
+                    onSubmit={handleEditSubmit}
+                  >
                     <ProductoFormFields
                       brandSuggestions={brandSuggestions}
                       form={editForm}
@@ -2287,16 +2354,6 @@ const ProductosAdminPage = ({ mode }: ProductosAdminPageProps) => {
 
         {mode === 'editar' ? (
           <article className="admin-card">
-            <div className="section-heading">
-              <div>
-                <h2>{listTitle}</h2>
-                <p className="admin-form-caption">{listHelper}</p>
-              </div>
-              <span className="small-label">
-                {loading ? 'Actualizando...' : 'Sincronizado con API'}
-              </span>
-            </div>
-
             {loading ? (
               <div className="loading-grid">
                 {Array.from({ length: 4 }).map((_, index) => (
@@ -2307,9 +2364,13 @@ const ProductosAdminPage = ({ mode }: ProductosAdminPageProps) => {
               <div className="empty-state">
                 No hay productos registrados todavia.
               </div>
+            ) : filteredProductos.length === 0 ? (
+              <div className="empty-state">
+                No encontramos coincidencias para "{productSearch.trim()}".
+              </div>
             ) : (
               <div className="product-list">
-                {productos.map((producto) => (
+                {filteredProductos.map((producto) => (
                   <div className="admin-product-card" key={producto.id}>
                     <AdminProductMedia
                       alt={producto.nombre}
@@ -2359,7 +2420,7 @@ const ProductosAdminPage = ({ mode }: ProductosAdminPageProps) => {
                           onClick={() => handleEditIntent(producto)}
                           type="button"
                         >
-                          Editar en modal
+                          Editar
                         </button>
                         <button
                           className="button button--danger"
@@ -2408,7 +2469,7 @@ const ProductosAdminPage = ({ mode }: ProductosAdminPageProps) => {
             }
           >
             <form
-              className="product-form"
+              className="product-form product-form--compact"
               id="edit-product-form"
               onSubmit={handleEditSubmit}
             >

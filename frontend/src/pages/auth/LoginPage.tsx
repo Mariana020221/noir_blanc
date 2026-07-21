@@ -131,11 +131,6 @@ export const LoginPage = ({ overlay = false }: LoginPageProps) => {
     : 'Registra aquí un nuevo acceso. Las cuentas posteriores no reciben administración total.'
   const loginDescription =
     'Escribe tu correo y tu contraseña para continuar.'
-  const infoCopy =
-    mode === 'register'
-      ? registerDescription
-      : 'Usa el acceso que ya fue creado para ti. Si aún no tienes cuenta, puedes registrarte desde esta misma vista.'
-
   const content = (
     <section
       aria-modal={overlay ? true : undefined}
@@ -147,37 +142,25 @@ export const LoginPage = ({ overlay = false }: LoginPageProps) => {
         <div>
           <span className="eyebrow">Acceso</span>
           <h1 className="panel-title" id="login-modal-title">
-            Noir & Blanc
+            Noir&Blanc
           </h1>
           <p className="muted-text">
             Entra con tu cuenta o crea un acceso si todavía no lo tienes.
           </p>
         </div>
 
-        <button
-          className="button button--ghost"
-          onClick={closeOverlay}
-          type="button"
-        >
-          {overlay ? 'Cerrar' : 'Ver catálogo'}
-        </button>
+        {overlay ? (
+          <button
+            className="button button--ghost"
+            onClick={closeOverlay}
+            type="button"
+          >
+            Cerrar
+          </button>
+        ) : null}
       </div>
 
       <div className="login-modal-body">
-        <aside className="login-modal-aside">
-          <div className="content-stack">
-            <span className="eyebrow">Cuenta</span>
-            <h2 className="display-title">Continúa con tu acceso.</h2>
-          </div>
-
-          <article className="editorial-card login-modal-note">
-            <span className="small-label">
-              {mode === 'register' ? registerEyebrow : 'Información'}
-            </span>
-            <p className="quote">{infoCopy}</p>
-          </article>
-        </aside>
-
         <section className="login-card login-card--modal">
           <div>
             <span className="eyebrow">

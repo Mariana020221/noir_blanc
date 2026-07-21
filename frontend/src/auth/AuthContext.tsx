@@ -20,7 +20,7 @@ interface AuthContextValue {
   isAuthenticated: boolean
   isSuperUser: boolean
   login: (credentials: LoginDto) => Promise<UsuarioAuth>
-  logout: () => void
+  logout: (redirectTo?: string) => void
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -39,8 +39,14 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     return response.usuario
   }
 
-  const logout = () => {
+  const logout = (redirectTo?: string) => {
     clearAuthSession()
+
+    if (redirectTo && typeof window !== 'undefined') {
+      window.location.replace(redirectTo)
+      return
+    }
+
     setUsuario(null)
     setToken(null)
   }

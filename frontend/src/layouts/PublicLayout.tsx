@@ -218,7 +218,7 @@ export const PublicLayout = () => {
           {isAuthenticated && !isSuperUser ? (
             <button
               className="nav-pill public-nav-button"
-              onClick={logout}
+              onClick={() => logout()}
               type="button"
             >
               Cerrar sesión
@@ -242,7 +242,7 @@ export const PublicLayout = () => {
       </main>
 
       <footer className="public-footer">
-        <span>Noir & Blanc selecciona siluetas sobrias para un guardarropa sereno.</span>
+        <span>Noir&Blanc selecciona siluetas sobrias para un guardarropa sereno.</span>
         <span>Catálogo público y gestión privada sincronizados con tu API.</span>
       </footer>
 

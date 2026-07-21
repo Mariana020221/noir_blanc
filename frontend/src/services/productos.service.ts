@@ -262,12 +262,13 @@ export const uploadProductoImages = async (
 ): Promise<UploadedProductoImage[]> => {
   const formData = new FormData()
   const token = window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
+  const uploadUrl = `${API_URL.replace(/\/$/, '')}/productos/uploads`
 
   files.forEach((file) => {
     formData.append('image', file)
   })
 
-  const response = await fetch(`${API_URL}/productos/uploads`, {
+  const response = await fetch(uploadUrl, {
     method: 'POST',
     headers: token
       ? {
