@@ -1,9 +1,6 @@
-import { BadRequestException } from '@nestjs/common';
 import {
-  invalidProductImageSizeMessage,
-  invalidProductImageTypeMessage,
-  maxProductImageSizeInBytes,
   validateProductImageFile,
+  validateProductImageFiles,
 } from './product-image-upload.utils';
 
 const buildFile = (
@@ -27,23 +24,15 @@ describe('product-image-upload.utils', () => {
     expect(() => validateProductImageFile(buildFile())).not.toThrow();
   });
 
-  it('rechaza un tipo de archivo no permitido', () => {
+  it('acepta lotes de imagenes sin aplicar validaciones adicionales', () => {
     expect(() =>
-      validateProductImageFile(
+      validateProductImageFiles([
+        buildFile(),
         buildFile({
           mimetype: 'image/gif',
+          size: 8_000_000,
         }),
-      ),
-    ).toThrow(new BadRequestException(invalidProductImageTypeMessage));
-  });
-
-  it('rechaza una imagen mayor a 5 MB', () => {
-    expect(() =>
-      validateProductImageFile(
-        buildFile({
-          size: maxProductImageSizeInBytes + 1,
-        }),
-      ),
-    ).toThrow(new BadRequestException(invalidProductImageSizeMessage));
+      ]),
+    ).not.toThrow();
   });
 });

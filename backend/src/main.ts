@@ -1,4 +1,3 @@
-import { join } from 'node:path';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
@@ -13,9 +12,6 @@ async function bootstrap() {
   const port = configService.get<number>('port') ?? 3000;
   const frontendUrl =
     configService.get<string>('frontendUrl') ?? 'http://localhost:5173';
-
-  const uploadsPath =
-    process.env.UPLOADS_PATH ?? join(process.cwd(), 'uploads');
 
   console.log('================================');
   console.log('NODE_ENV:', process.env.NODE_ENV);
@@ -60,10 +56,6 @@ async function bootstrap() {
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-  });
-
-  app.useStaticAssets(uploadsPath, {
-    prefix: '/uploads',
   });
 
   const swaggerConfig = new DocumentBuilder()

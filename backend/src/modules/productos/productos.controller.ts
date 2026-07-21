@@ -87,8 +87,8 @@ export class ProductosController {
         images: [
           {
             secureUrl:
-              'https://res.cloudinary.com/demo/image/upload/v1/noir-blanc/productos/vestido-midi-1.jpg',
-            publicId: 'noir-blanc/productos/vestido-midi-1',
+              'https://res.cloudinary.com/demo/image/upload/v1/noir-blanc/productos/producto-demo.jpg',
+            publicId: 'noir-blanc/productos/producto-demo',
             width: 1200,
             height: 1600,
             format: 'jpg',
@@ -96,7 +96,7 @@ export class ProductosController {
           },
         ],
         paths: [
-          'https://res.cloudinary.com/demo/image/upload/v1/noir-blanc/productos/vestido-midi-1.jpg',
+          'https://res.cloudinary.com/demo/image/upload/v1/noir-blanc/productos/producto-demo.jpg',
         ],
       },
     },

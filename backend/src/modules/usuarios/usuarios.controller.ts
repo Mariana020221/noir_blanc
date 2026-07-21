@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -10,6 +19,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { BootstrapStatusDto } from './dto/bootstrap-status.dto';
+import { CambiarPasswordUsuarioDto } from './dto/cambiar-password-usuario.dto';
 import { CrearUsuarioDto } from './dto/crear-usuario.dto';
 import { Usuario, UsuarioRol } from './entities/usuario.entity';
 import { UsuariosService } from './usuarios.service';
@@ -88,5 +98,21 @@ export class UsuariosController {
   })
   findAll(): Promise<Usuario[]> {
     return this.usuariosService.findAll();
+  }
+
+  @Patch(':id/password')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UsuarioRol.SUPER_ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Cambiar la contrasena de un usuario del panel' })
+  @ApiOkResponse({
+    description: 'Contrasena actualizada correctamente.',
+    type: Usuario,
+  })
+  changePassword(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() cambiarPasswordUsuarioDto: CambiarPasswordUsuarioDto,
+  ): Promise<Usuario> {
+    return this.usuariosService.changePassword(id, cambiarPasswordUsuarioDto);
   }
 }

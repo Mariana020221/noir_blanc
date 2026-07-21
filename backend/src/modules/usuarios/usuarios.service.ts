@@ -3,10 +3,12 @@ import {
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
+import { CambiarPasswordUsuarioDto } from './dto/cambiar-password-usuario.dto';
 import { CrearUsuarioDto } from './dto/crear-usuario.dto';
 import { Usuario, UsuarioRol } from './entities/usuario.entity';
 
@@ -18,6 +20,10 @@ export class UsuariosService {
     @InjectRepository(Usuario)
     private readonly usuariosRepository: Repository<Usuario>,
   ) {}
+
+  private hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, PASSWORD_SALT_ROUNDS);
+  }
 
   async createBootstrapAdmin(
     crearUsuarioDto: CrearUsuarioDto,
@@ -64,10 +70,7 @@ export class UsuariosService {
       throw new ConflictException(`Ya existe un usuario con email ${email}.`);
     }
 
-    const passwordHash = await bcrypt.hash(
-      crearUsuarioDto.password,
-      PASSWORD_SALT_ROUNDS,
-    );
+    const passwordHash = await this.hashPassword(crearUsuarioDto.password);
 
     const usuario = this.usuariosRepository.create({
       nombre: crearUsuarioDto.nombre.trim(),
@@ -87,6 +90,31 @@ export class UsuariosService {
     }
 
     return usuarioCreado;
+  }
+
+  async changePassword(
+    id: number,
+    cambiarPasswordUsuarioDto: CambiarPasswordUsuarioDto,
+  ): Promise<Usuario> {
+    const usuario = await this.findById(id);
+
+    if (!usuario) {
+      throw new NotFoundException(`Usuario con id ${id} no encontrado.`);
+    }
+
+    usuario.password = await this.hashPassword(cambiarPasswordUsuarioDto.password);
+
+    await this.usuariosRepository.save(usuario);
+
+    const usuarioActualizado = await this.findById(id);
+
+    if (!usuarioActualizado) {
+      throw new InternalServerErrorException(
+        'No fue posible recuperar el usuario actualizado.',
+      );
+    }
+
+    return usuarioActualizado;
   }
 
   async canBootstrap(): Promise<boolean> {

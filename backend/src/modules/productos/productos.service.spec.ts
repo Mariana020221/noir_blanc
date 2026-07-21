@@ -9,7 +9,7 @@ const buildProducto = (overrides: Partial<Producto> = {}): Producto => ({
   existencia: 12,
   categoria: 'Vestidos',
   categorias: ['Vestidos'],
-  marca: 'Noir & Blanc',
+  marca: 'Noir&Blanc',
   tallas: ['CH', 'M'],
   colores: ['Negro'],
   imagenPrincipal:
