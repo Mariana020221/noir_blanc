@@ -11,7 +11,15 @@ export const toInteger = ({ value }: { value: unknown }): unknown => {
     return undefined;
   }
 
-  return Number.parseInt(String(value), 10);
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return Number.parseInt(`${value}`, 10);
+  }
+
+  return value;
 };
 
 export const toBoolean = ({ value }: { value: unknown }): unknown => {

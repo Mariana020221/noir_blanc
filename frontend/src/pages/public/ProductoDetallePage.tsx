@@ -105,20 +105,21 @@ const buildGaleria = (
 
 export const ProductoDetallePage = () => {
   const { id } = useParams()
+  const productoId = Number(id)
+  const invalidProductoId = Number.isNaN(productoId)
   const [producto, setProducto] = useState<Producto | null>(null)
   const [selectedVariantKey, setSelectedVariantKey] = useState<string | null>(null)
-  const [selectedImage, setSelectedImage] = useState<string | null>(null)
-  const [selectedImageHasError, setSelectedImageHasError] = useState(false)
+  const [selectedImagePreference, setSelectedImagePreference] = useState<string | null>(
+    null,
+  )
+  const [failedSelectedImage, setFailedSelectedImage] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
-    const productoId = Number(id)
 
-    if (Number.isNaN(productoId)) {
-      setError('El producto solicitado no es valido.')
-      setLoading(false)
+    if (invalidProductoId) {
       return
     }
 
@@ -130,6 +131,8 @@ export const ProductoDetallePage = () => {
         if (active) {
           setProducto(response)
           setSelectedVariantKey(null)
+          setSelectedImagePreference(null)
+          setFailedSelectedImage(null)
           setError(null)
         }
       } catch (requestError) {
@@ -153,11 +156,7 @@ export const ProductoDetallePage = () => {
     return () => {
       active = false
     }
-  }, [id])
-
-  useEffect(() => {
-    setSelectedImageHasError(false)
-  }, [selectedImage])
+  }, [invalidProductoId, productoId])
 
   const galeria = useMemo(
     () => buildGaleria(producto, selectedVariantKey),
@@ -168,17 +167,21 @@ export const ProductoDetallePage = () => {
     (variant) => variant.key === selectedVariantKey,
   )
   const categorias = producto ? getProductoCategorias(producto) : []
+  const selectedImage =
+    selectedImagePreference && galeria.includes(selectedImagePreference)
+      ? selectedImagePreference
+      : galeria[0] ?? null
 
-  useEffect(() => {
-    if (galeria.length === 0) {
-      setSelectedImage(null)
-      return
-    }
-
-    setSelectedImage((current) =>
-      current && galeria.includes(current) ? current : galeria[0],
+  if (invalidProductoId) {
+    return (
+      <div className="content-stack">
+        <Link className="back-link" to="/">
+          Volver al catalogo
+        </Link>
+        <div className="alert alert--error">El producto solicitado no es valido.</div>
+      </div>
     )
-  }, [galeria])
+  }
 
   if (loading) {
     return (
@@ -219,10 +222,10 @@ export const ProductoDetallePage = () => {
       <section className="detail-grid">
         <article className="detail-gallery-column">
           <div className="detail-media">
-            {selectedImage && !selectedImageHasError ? (
+            {selectedImage && failedSelectedImage !== selectedImage ? (
               <img
                 alt={producto.nombre}
-                onError={() => setSelectedImageHasError(true)}
+                onError={() => setFailedSelectedImage(selectedImage)}
                 src={selectedImage}
               />
             ) : (
@@ -266,7 +269,10 @@ export const ProductoDetallePage = () => {
                     image === selectedImage ? ' is-active' : ''
                   }`}
                   key={image}
-                  onClick={() => setSelectedImage(image)}
+                  onClick={() => {
+                    setSelectedImagePreference(image)
+                    setFailedSelectedImage(null)
+                  }}
                   type="button"
                 >
                   <img alt={`Vista de ${producto.nombre}`} src={image} />

@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import Swal from 'sweetalert2'
@@ -18,7 +18,9 @@ import {
   updateProducto,
   type Producto,
   type ProductoImagenColor,
+  type ProductoImagenMetadata,
   type ProductoPayload,
+  type UploadedProductoImage,
 } from '../../services/productos.service'
 
 interface ProductoImagenColorFormState {
@@ -42,9 +44,11 @@ interface ProductoFormState {
   tallas: string
   coloresDetalle: ProductoColorFormState[]
   imagenPrincipal: string
+  imagenPrincipalPublicId: string
   imagenPrincipalColor: string
   imagenPrincipalColorHex: string
   imagenes: string
+  imagenesMetadata: ProductoImagenMetadata[]
   imagenesPorColor: ProductoImagenColorFormState[]
   activo: boolean
 }
@@ -93,8 +97,7 @@ interface ProductosAdminPageProps {
   mode: ProductosAdminMode
 }
 
-const acceptedImageTypes =
-  'image/jpeg,image/png,image/webp,image/avif,image/gif'
+const acceptedImageTypes = 'image/jpeg,image/png,image/webp,image/avif'
 const suggestedProductColors = [
   'Negro',
   'Blanco',
@@ -165,9 +168,11 @@ const createEmptyFormState = (): ProductoFormState => ({
   tallas: '',
   coloresDetalle: [],
   imagenPrincipal: '',
+  imagenPrincipalPublicId: '',
   imagenPrincipalColor: '',
   imagenPrincipalColorHex: '#d2c8bc',
   imagenes: '',
+  imagenesMetadata: [],
   imagenesPorColor: [],
   activo: true,
 })
@@ -215,6 +220,28 @@ const normalizeSecondaryImages = (
   const normalizedPrimary = primaryImage?.trim() ?? ''
 
   return dedupeTrimmedList(items).filter((item) => item !== normalizedPrimary)
+}
+
+const buildImageMetadataState = (
+  images: string[],
+  metadata: ProductoImagenMetadata[],
+): ProductoImagenMetadata[] => {
+  const metadataByUrl = new Map<string, ProductoImagenMetadata>()
+
+  metadata.forEach((item) => {
+    const url = item.url.trim()
+
+    if (!url || metadataByUrl.has(url)) {
+      return
+    }
+
+    metadataByUrl.set(url, {
+      url,
+      publicId: item.publicId?.trim() || null,
+    })
+  })
+
+  return images.map((url) => metadataByUrl.get(url) ?? { url, publicId: null })
 }
 
 const buildUniqueColorPalette = (
@@ -537,6 +564,10 @@ const mapProductoToForm = (producto: Producto): ProductoFormState => {
     producto.imagenPrincipal,
   )
   const coloresDetalle = buildPaletteFromProducto(producto)
+  const secondaryImageMetadata = buildImageMetadataState(
+    secondaryImages,
+    producto.imagenesMetadata,
+  )
 
   return {
     nombre: producto.nombre,
@@ -553,12 +584,14 @@ const mapProductoToForm = (producto: Producto): ProductoFormState => {
     tallas: producto.tallas.join(', '),
     coloresDetalle,
     imagenPrincipal: producto.imagenPrincipal ?? '',
+    imagenPrincipalPublicId: producto.imagenPrincipalPublicId ?? '',
     imagenPrincipalColor: producto.imagenPrincipalColor ?? '',
     imagenPrincipalColorHex:
       findColorHex(coloresDetalle, producto.imagenPrincipalColor) ??
       producto.imagenPrincipalColorHex ??
       '#d2c8bc',
     imagenes: secondaryImages.join('\n'),
+    imagenesMetadata: secondaryImageMetadata,
     imagenesPorColor: buildImageColorFormState(
       secondaryImages,
       producto.imagenesPorColor,
@@ -572,6 +605,10 @@ const buildPayload = (form: ProductoFormState): ProductoPayload => {
   const secondaryImages = normalizeSecondaryImages(
     parseList(form.imagenes),
     form.imagenPrincipal,
+  )
+  const secondaryImageMetadata = buildImageMetadataState(
+    secondaryImages,
+    form.imagenesMetadata,
   )
   const relatedImages = buildImageColorFormState(
     secondaryImages,
@@ -590,6 +627,9 @@ const buildPayload = (form: ProductoFormState): ProductoPayload => {
     tallas: parseList(form.tallas),
     colores,
     imagenPrincipal: form.imagenPrincipal.trim() || null,
+    imagenPrincipalPublicId: form.imagenPrincipal.trim()
+      ? form.imagenPrincipalPublicId.trim() || null
+      : null,
     imagenPrincipalColor: form.imagenPrincipal.trim()
       ? form.imagenPrincipalColor.trim() || null
       : null,
@@ -597,6 +637,7 @@ const buildPayload = (form: ProductoFormState): ProductoPayload => {
       ? findColorHex(coloresDetalle, form.imagenPrincipalColor)
       : null,
     imagenes: secondaryImages,
+    imagenesMetadata: secondaryImageMetadata,
     imagenesPorColor: relatedImages.map((image) => ({
       imagen: image.imagen,
       color: image.color.trim() || null,
@@ -606,13 +647,13 @@ const buildPayload = (form: ProductoFormState): ProductoPayload => {
   }
 }
 
-const applyUploadedUrlsToForm = (
+const applyUploadedImagesToForm = (
   form: ProductoFormState,
   field: ProductoImageField,
-  urls: string[],
+  uploadedImages: UploadedProductoImage[],
 ): ProductoFormState => {
   if (field === 'imagenPrincipal') {
-    const nextPrimaryImage = urls[0] ?? form.imagenPrincipal
+    const nextPrimaryImage = uploadedImages[0]?.url ?? form.imagenPrincipal
     const nextSecondaryImages = normalizeSecondaryImages(
       parseList(form.imagenes),
       nextPrimaryImage,
@@ -621,7 +662,12 @@ const applyUploadedUrlsToForm = (
     return {
       ...form,
       imagenPrincipal: nextPrimaryImage,
+      imagenPrincipalPublicId: uploadedImages[0]?.publicId ?? '',
       imagenes: serializeList(nextSecondaryImages),
+      imagenesMetadata: buildImageMetadataState(
+        nextSecondaryImages,
+        form.imagenesMetadata,
+      ),
       imagenesPorColor: buildImageColorFormState(
         nextSecondaryImages,
         form.imagenesPorColor,
@@ -630,13 +676,20 @@ const applyUploadedUrlsToForm = (
   }
 
   const nextSecondaryImages = normalizeSecondaryImages(
-    [...parseList(form.imagenes), ...urls],
+    [...parseList(form.imagenes), ...uploadedImages.map((image) => image.url)],
     form.imagenPrincipal,
   )
 
   return {
     ...form,
     imagenes: serializeList(nextSecondaryImages),
+    imagenesMetadata: buildImageMetadataState(nextSecondaryImages, [
+      ...form.imagenesMetadata,
+      ...uploadedImages.map((image) => ({
+        url: image.url,
+        publicId: image.publicId,
+      })),
+    ]),
     imagenesPorColor: buildImageColorFormState(
       nextSecondaryImages,
       form.imagenesPorColor,
@@ -647,6 +700,7 @@ const applyUploadedUrlsToForm = (
 const removePrimaryImageFromForm = (form: ProductoFormState): ProductoFormState => ({
   ...form,
   imagenPrincipal: '',
+  imagenPrincipalPublicId: '',
   imagenPrincipalColor: '',
   imagenPrincipalColorHex: '#d2c8bc',
 })
@@ -654,17 +708,19 @@ const removePrimaryImageFromForm = (form: ProductoFormState): ProductoFormState 
 const removeSecondaryImageFromForm = (
   form: ProductoFormState,
   indexToRemove: number,
-): ProductoFormState => ({
-  ...form,
-  imagenes: serializeList(
-    form.imagenesPorColor
-      .filter((_, index) => index !== indexToRemove)
-      .map((image) => image.imagen),
-  ),
-  imagenesPorColor: form.imagenesPorColor.filter(
+): ProductoFormState => {
+  const nextAssignments = form.imagenesPorColor.filter(
     (_, index) => index !== indexToRemove,
-  ),
-})
+  )
+  const nextImages = nextAssignments.map((image) => image.imagen)
+
+  return {
+    ...form,
+    imagenes: serializeList(nextImages),
+    imagenesMetadata: buildImageMetadataState(nextImages, form.imagenesMetadata),
+    imagenesPorColor: nextAssignments,
+  }
+}
 
 const revokePreviewUrls = (urls: string[]) => {
   urls.forEach((url) => {
@@ -734,16 +790,13 @@ const AdminProductMedia = ({
   alt: string
   src: string | null
 }) => {
-  const [hasError, setHasError] = useState(false)
-
-  useEffect(() => {
-    setHasError(false)
-  }, [src])
+  const [failedSrc, setFailedSrc] = useState<string | null>(null)
+  const canRenderImage = Boolean(src) && failedSrc !== src
 
   return (
     <div className="product-media">
-      {src && !hasError ? (
-        <img alt={alt} onError={() => setHasError(true)} src={src} />
+      {canRenderImage ? (
+        <img alt={alt} onError={() => setFailedSrc(src)} src={src ?? undefined} />
       ) : (
         <div className="media-fallback">Noir & Blanc</div>
       )}
@@ -1326,7 +1379,7 @@ const ProductoFormFields = ({
       </label>
 
       <ImageDropzone
-        description="Acepta JPG, PNG, WEBP, AVIF o GIF. Puedes hacer clic o arrastrar la foto principal y luego relacionarla con su color en el bloque inferior."
+        description="Acepta JPG, PNG, WEBP o AVIF. Puedes hacer clic o arrastrar la foto principal y luego relacionarla con su color en el bloque inferior."
         images={principalPreview}
         isUploading={uploadingField === 'imagenPrincipal'}
         label="Imagen principal"
@@ -1529,7 +1582,7 @@ const ProductosAdminPage = ({ mode }: ProductosAdminPageProps) => {
     setCreatePreviewState((current) => clearPreviewState(current))
   }
 
-  const resetEditForm = () => {
+  const resetEditForm = useCallback(() => {
     setEditingId(null)
     setEditForm(null)
     setEditPreviewState((current) => clearPreviewState(current))
@@ -1539,7 +1592,7 @@ const ProductosAdminPage = ({ mode }: ProductosAdminPageProps) => {
       nextParams.delete('productoId')
       setSearchParams(nextParams, { replace: true })
     }
-  }
+  }, [searchParams, setSearchParams])
 
   useEffect(() => {
     if (mode !== 'editar' || !editingId) {
@@ -1572,7 +1625,15 @@ const ProductosAdminPage = ({ mode }: ProductosAdminPageProps) => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [editSaving, editUploadingField, editingId, mode, searchParams, setSearchParams])
+  }, [
+    editSaving,
+    editUploadingField,
+    editingId,
+    mode,
+    resetEditForm,
+    searchParams,
+    setSearchParams,
+  ])
 
   const toggleCategory = (categorias: string[], categoria: string) => {
     if (categorias.includes(categoria)) {
@@ -1838,8 +1899,12 @@ const ProductosAdminPage = ({ mode }: ProductosAdminPageProps) => {
 
     try {
       setCreateUploadingField(field)
-      const urls = await uploadProductoImages(filesToUpload)
-      const nextForm = applyUploadedUrlsToForm(createFormRef.current, field, urls)
+      const uploadedImages = await uploadProductoImages(filesToUpload)
+      const nextForm = applyUploadedImagesToForm(
+        createFormRef.current,
+        field,
+        uploadedImages,
+      )
 
       setCreateForm(nextForm)
       setCreatePreviewState((current) =>
@@ -1876,14 +1941,18 @@ const ProductosAdminPage = ({ mode }: ProductosAdminPageProps) => {
 
     try {
       setEditUploadingField(field)
-      const urls = await uploadProductoImages(filesToUpload)
+      const uploadedImages = await uploadProductoImages(filesToUpload)
       const currentForm = editFormRef.current
 
       if (!currentForm) {
         return
       }
 
-      const nextForm = applyUploadedUrlsToForm(currentForm, field, urls)
+      const nextForm = applyUploadedImagesToForm(
+        currentForm,
+        field,
+        uploadedImages,
+      )
 
       setEditForm(nextForm)
       setEditPreviewState((current) =>

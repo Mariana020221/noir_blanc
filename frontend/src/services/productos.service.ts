@@ -6,6 +6,11 @@ export interface ProductoImagenColor {
   colorHex: string | null
 }
 
+export interface ProductoImagenMetadata {
+  url: string
+  publicId: string | null
+}
+
 export interface Producto {
   id: number
   nombre: string
@@ -18,9 +23,11 @@ export interface Producto {
   tallas: string[]
   colores: string[]
   imagenPrincipal: string | null
+  imagenPrincipalPublicId: string | null
   imagenPrincipalColor: string | null
   imagenPrincipalColorHex: string | null
   imagenes: string[]
+  imagenesMetadata: ProductoImagenMetadata[]
   imagenesPorColor: ProductoImagenColor[]
   activo: boolean
   createdAt: string
@@ -46,15 +53,32 @@ export interface ProductoPayload {
   tallas: string[]
   colores: string[]
   imagenPrincipal?: string | null
+  imagenPrincipalPublicId?: string | null
   imagenPrincipalColor?: string | null
   imagenPrincipalColorHex?: string | null
   imagenes: string[]
+  imagenesMetadata?: ProductoImagenMetadata[]
   imagenesPorColor?: ProductoImagenColor[]
   activo?: boolean
 }
 
+export interface UploadedProductoImage extends ProductoImagenMetadata {
+  width: number
+  height: number
+  format: string
+  bytes: number
+}
+
 interface UploadProductoImagesResponse {
-  paths: string[]
+  images?: Array<{
+    secureUrl: string
+    publicId: string
+    width: number
+    height: number
+    format: string
+    bytes: number
+  }>
+  paths?: string[]
 }
 
 const currencyFormatter = new Intl.NumberFormat('es-MX', {
@@ -96,6 +120,42 @@ const buildUniqueTextValues = (values: Array<string | null | undefined>) => {
   return Array.from(uniqueValues.values())
 }
 
+const normalizePublicId = (value: string | null | undefined) => {
+  const normalizedValue = value?.trim()
+
+  return normalizedValue ? normalizedValue : null
+}
+
+const normalizeProductoImageMetadata = (
+  producto: Producto,
+): ProductoImagenMetadata[] => {
+  const metadataByUrl = new Map<string, ProductoImagenMetadata>()
+
+  ;(producto.imagenesMetadata ?? []).forEach((item) => {
+    const url = resolveImageUrl(item.url)
+
+    if (!url || metadataByUrl.has(url)) {
+      return
+    }
+
+    metadataByUrl.set(url, {
+      url,
+      publicId: normalizePublicId(item.publicId),
+    })
+  })
+
+  const orderedUrls = Array.from(
+    new Set([
+      ...((producto.imagenes ?? [])
+        .map((image) => resolveImageUrl(image))
+        .filter((image): image is string => Boolean(image))),
+      ...metadataByUrl.keys(),
+    ]),
+  )
+
+  return orderedUrls.map((url) => metadataByUrl.get(url) ?? { url, publicId: null })
+}
+
 const normalizeProducto = (producto: Producto): Producto => {
   const uniqueImageAssignments = new Map<string, ProductoImagenColor>()
   ;(producto.imagenesPorColor ?? []).forEach((item) => {
@@ -110,8 +170,9 @@ const normalizeProducto = (producto: Producto): Producto => {
       imagen,
     })
   })
-  const imagenesPorColor = Array.from(uniqueImageAssignments.values()).map(
-    (item) => {
+
+  const imagenesPorColor = Array.from(uniqueImageAssignments.values())
+    .map((item) => {
       const imagen = resolveImageUrl(item.imagen)
 
       if (!imagen) {
@@ -124,15 +185,12 @@ const normalizeProducto = (producto: Producto): Producto => {
       }
     })
     .filter((item): item is ProductoImagenColor => Boolean(item))
+  const imagenesMetadata = normalizeProductoImageMetadata(producto)
   const imagenes = Array.from(
-    new Set(
-      [
-        ...producto.imagenes
-          .map((image) => resolveImageUrl(image))
-          .filter((image): image is string => Boolean(image)),
-        ...imagenesPorColor.map((item) => item.imagen),
-      ],
-    ),
+    new Set([
+      ...imagenesMetadata.map((item) => item.url),
+      ...imagenesPorColor.map((item) => item.imagen),
+    ]),
   )
   const imagenPrincipal =
     resolveImageUrl(producto.imagenPrincipal) ?? imagenes[0] ?? null
@@ -148,7 +206,9 @@ const normalizeProducto = (producto: Producto): Producto => {
     tallas: buildUniqueTextValues(producto.tallas ?? []),
     colores: buildUniqueTextValues(producto.colores ?? []),
     imagenPrincipal,
+    imagenPrincipalPublicId: normalizePublicId(producto.imagenPrincipalPublicId),
     imagenes,
+    imagenesMetadata,
     imagenesPorColor,
   }
 }
@@ -197,12 +257,14 @@ export const createProducto = async (payload: ProductoPayload) => {
   return normalizeProducto(data)
 }
 
-export const uploadProductoImages = async (files: File[]) => {
+export const uploadProductoImages = async (
+  files: File[],
+): Promise<UploadedProductoImage[]> => {
   const formData = new FormData()
   const token = window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
 
   files.forEach((file) => {
-    formData.append('files', file)
+    formData.append('image', file)
   })
 
   const response = await fetch(`${API_URL}/productos/uploads`, {
@@ -220,9 +282,32 @@ export const uploadProductoImages = async (files: File[]) => {
   }
 
   const data = (await response.json()) as UploadProductoImagesResponse
-  const resolvedPaths = data.paths
-    .map((path) => resolveImageUrl(path))
-    .filter((path): path is string => Boolean(path))
+  const uploadedImages =
+    data.images?.map((image) => ({
+      url: resolveImageUrl(image.secureUrl) ?? image.secureUrl,
+      publicId: normalizePublicId(image.publicId),
+      width: image.width,
+      height: image.height,
+      format: image.format,
+      bytes: image.bytes,
+    })) ?? []
+
+  if (uploadedImages.length > 0) {
+    return uploadedImages
+  }
+
+  const resolvedPaths =
+    data.paths
+      ?.map((path) => resolveImageUrl(path))
+      .filter((path): path is string => Boolean(path))
+      .map((url) => ({
+        url,
+        publicId: null,
+        width: 0,
+        height: 0,
+        format: 'unknown',
+        bytes: 0,
+      })) ?? []
 
   if (resolvedPaths.length === 0) {
     throw new Error('La API no devolvio rutas de imagen validas para el producto.')

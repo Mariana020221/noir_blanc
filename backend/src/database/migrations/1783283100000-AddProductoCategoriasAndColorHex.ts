@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddProductoCategoriasAndColorHex1783283100000
-  implements MigrationInterface
-{
+export class AddProductoCategoriasAndColorHex1783283100000 implements MigrationInterface {
   name = 'AddProductoCategoriasAndColorHex1783283100000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

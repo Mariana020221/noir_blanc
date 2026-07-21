@@ -45,7 +45,6 @@ export const PublicLayout = () => {
 
   useEffect(() => {
     if (!isCatalogView) {
-      setBrandOptions([])
       return
     }
 

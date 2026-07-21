@@ -1,4 +1,3 @@
-import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -15,8 +14,8 @@ async function bootstrap() {
   const frontendUrl =
     configService.get<string>('frontendUrl') ?? 'http://localhost:5173';
 
- const uploadsPath =
-  process.env.UPLOADS_PATH ?? join(process.cwd(), 'uploads');
+  const uploadsPath =
+    process.env.UPLOADS_PATH ?? join(process.cwd(), 'uploads');
 
   console.log('================================');
   console.log('NODE_ENV:', process.env.NODE_ENV);
@@ -24,8 +23,6 @@ async function bootstrap() {
   console.log('PORT CONFIG:', port);
   console.log('FRONTEND_URL:', frontendUrl);
   console.log('================================');
-
-  await mkdir(uploadsPath, { recursive: true });
 
   app.useGlobalPipes(
     new ValidationPipe({

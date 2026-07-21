@@ -81,16 +81,18 @@ const ProductMedia = ({
   alt: string
   src: string | null
 }) => {
-  const [hasError, setHasError] = useState(false)
-
-  useEffect(() => {
-    setHasError(false)
-  }, [src])
+  const [failedSrc, setFailedSrc] = useState<string | null>(null)
+  const canRenderImage = Boolean(src) && failedSrc !== src
 
   return (
     <div className="product-media">
-      {src && !hasError ? (
-        <img alt={alt} loading="lazy" onError={() => setHasError(true)} src={src} />
+      {canRenderImage ? (
+        <img
+          alt={alt}
+          loading="lazy"
+          onError={() => setFailedSrc(src)}
+          src={src ?? undefined}
+        />
       ) : (
         <div className="media-fallback">Noir & Blanc</div>
       )}

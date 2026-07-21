@@ -15,8 +15,8 @@ import { UsuariosModule } from '../usuarios/usuarios.module';
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService): JwtModuleOptions => {
-        const expiresIn =
-          (configService.get<string>('jwt.expiresIn') ?? '1d') as StringValue;
+        const expiresIn = (configService.get<string>('jwt.expiresIn') ??
+          '1d') as StringValue;
 
         return {
           secret: configService.getOrThrow<string>('jwt.secret'),

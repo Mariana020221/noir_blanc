@@ -36,6 +36,22 @@ class ProductoImagenColor {
   colorHex: string | null;
 }
 
+class ProductoImagenMetadata {
+  @ApiProperty({
+    example:
+      'https://res.cloudinary.com/demo/image/upload/v1/noir-blanc/productos/vestido-midi-1.jpg',
+    description: 'URL segura de la imagen almacenada en Cloudinary.',
+  })
+  url: string;
+
+  @ApiPropertyOptional({
+    example: 'noir-blanc/productos/vestido-midi-1',
+    description: 'Public ID asociado en Cloudinary.',
+    nullable: true,
+  })
+  publicId: string | null;
+}
+
 @Entity({ name: 'productos' })
 export class Producto {
   @ApiProperty({
@@ -137,6 +153,14 @@ export class Producto {
   imagenPrincipal: string | null;
 
   @ApiPropertyOptional({
+    example: 'noir-blanc/productos/vestido-midi-cover',
+    description: 'Public ID de Cloudinary para la imagen principal.',
+    nullable: true,
+  })
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  imagenPrincipalPublicId: string | null;
+
+  @ApiPropertyOptional({
     example: 'Negro',
     description: 'Color relacionado con la imagen principal.',
     nullable: true,
@@ -146,7 +170,8 @@ export class Producto {
 
   @ApiPropertyOptional({
     example: '#f7a6c5',
-    description: 'Color visual hexadecimal relacionado con la imagen principal.',
+    description:
+      'Color visual hexadecimal relacionado con la imagen principal.',
     nullable: true,
   })
   @Column({ type: 'varchar', length: 20, nullable: true })
@@ -166,6 +191,27 @@ export class Producto {
     default: () => "'{}'",
   })
   imagenes: string[];
+
+  @ApiProperty({
+    description:
+      'Metadata de Cloudinary para las imagenes adicionales guardadas.',
+    type: [ProductoImagenMetadata],
+    example: [
+      {
+        url: 'https://res.cloudinary.com/demo/image/upload/v1/noir-blanc/productos/vestido-midi-1.jpg',
+        publicId: 'noir-blanc/productos/vestido-midi-1',
+      },
+      {
+        url: 'https://res.cloudinary.com/demo/image/upload/v1/noir-blanc/productos/vestido-midi-2.jpg',
+        publicId: 'noir-blanc/productos/vestido-midi-2',
+      },
+    ],
+  })
+  @Column({
+    type: 'jsonb',
+    default: () => "'[]'::jsonb",
+  })
+  imagenesMetadata: ProductoImagenMetadata[];
 
   @ApiProperty({
     description: 'Relacion de imagenes adicionales con su color.',

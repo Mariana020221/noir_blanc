@@ -22,7 +22,10 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales invalidas.');
     }
 
-    const passwordValida = await this.validarPassword(password, usuario.password);
+    const passwordValida = await this.validarPassword(
+      password,
+      usuario.password,
+    );
 
     if (!passwordValida) {
       throw new UnauthorizedException('Credenciales invalidas.');

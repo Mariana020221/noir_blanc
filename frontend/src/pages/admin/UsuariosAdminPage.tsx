@@ -36,8 +36,6 @@ export const UsuariosAdminPage = () => {
 
   useEffect(() => {
     if (!isSuperUser) {
-      setLoading(false)
-      setUsuarios([])
       return
     }
 

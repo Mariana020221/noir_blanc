@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 import { Producto } from './entities/producto.entity';
 import { ProductosController } from './productos.controller';
 import { ProductosService } from './productos.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Producto])],
+  imports: [TypeOrmModule.forFeature([Producto]), CloudinaryModule],
   controllers: [ProductosController],
   providers: [ProductosService, RolesGuard],
   exports: [ProductosService],

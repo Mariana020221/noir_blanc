@@ -13,6 +13,7 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ImagenProductoColorDto } from './imagen-producto-color.dto';
+import { ProductoImagenMetadataDto } from './producto-imagen-metadata.dto';
 import { toBoolean, toInteger, toNumber } from './producto-dto.transforms';
 
 export class CrearProductoDto {
@@ -114,6 +115,16 @@ export class CrearProductoDto {
   imagenPrincipal?: string;
 
   @ApiPropertyOptional({
+    example: 'noir-blanc/productos/vestido-midi-cover',
+    description: 'Public ID de Cloudinary para la imagen principal.',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  imagenPrincipalPublicId?: string | null;
+
+  @ApiPropertyOptional({
     example: 'Negro',
     description: 'Color relacionado con la imagen principal.',
     nullable: true,
@@ -125,7 +136,8 @@ export class CrearProductoDto {
 
   @ApiPropertyOptional({
     example: '#f7a6c5',
-    description: 'Color visual hexadecimal relacionado con la imagen principal.',
+    description:
+      'Color visual hexadecimal relacionado con la imagen principal.',
     nullable: true,
   })
   @IsOptional()
@@ -147,6 +159,17 @@ export class CrearProductoDto {
   @IsUrl({ require_tld: false }, { each: true })
   @MaxLength(500, { each: true })
   imagenes?: string[];
+
+  @ApiPropertyOptional({
+    description:
+      'Metadata de Cloudinary para las imagenes secundarias del producto.',
+    type: [ProductoImagenMetadataDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProductoImagenMetadataDto)
+  imagenesMetadata?: ProductoImagenMetadataDto[];
 
   @ApiPropertyOptional({
     description: 'Relaciona cada imagen adicional con el color mostrado.',
