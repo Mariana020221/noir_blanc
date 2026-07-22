@@ -1,4 +1,5 @@
-import api, { API_URL, AUTH_TOKEN_STORAGE_KEY } from '../api/api'
+import axios from 'axios'
+import api, { API_URL } from '../api/api'
 
 export interface ProductoImagenColor {
   imagen: string
@@ -213,30 +214,6 @@ const normalizeProducto = (producto: Producto): Producto => {
   }
 }
 
-const buildUploadError = async (response: Response) => {
-  try {
-    const data = (await response.json()) as { message?: string | string[] }
-
-    if (Array.isArray(data.message) && data.message.length > 0) {
-      return new Error(data.message.join(' '))
-    }
-
-    if (typeof data.message === 'string' && data.message.trim()) {
-      return new Error(data.message)
-    }
-  } catch {
-    // Usa el mensaje generico definido mas abajo si la respuesta no es JSON.
-  }
-
-  if (response.status === 404) {
-    return new Error(
-      'La API activa no tiene habilitada la ruta de carga de imagenes. Reinicia el backend y vuelve a intentar la subida.',
-    )
-  }
-
-  return new Error('No fue posible subir las imagenes seleccionadas.')
-}
-
 export const getProductos = async (filters?: ProductoFilters) => {
   const { data } = await api.get<Producto[]>('/productos', {
     params: filters,
@@ -261,28 +238,35 @@ export const uploadProductoImages = async (
   files: File[],
 ): Promise<UploadedProductoImage[]> => {
   const formData = new FormData()
-  const token = window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
-  const uploadUrl = `${API_URL.replace(/\/$/, '')}/productos/uploads`
 
   files.forEach((file) => {
     formData.append('image', file)
   })
 
-  const response = await fetch(uploadUrl, {
-    method: 'POST',
-    headers: token
-      ? {
-          Authorization: `Bearer ${token}`,
-        }
-      : undefined,
-    body: formData,
-  })
+  let data: UploadProductoImagesResponse
 
-  if (!response.ok) {
-    throw await buildUploadError(response)
+  try {
+    const response = await api.post<UploadProductoImagesResponse>(
+      '/productos/uploads',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      },
+    )
+
+    data = response.data
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      throw new Error(
+        'La sesion del panel vencio o ya no es valida. Inicia sesion de nuevo y vuelve a intentar la subida.',
+      )
+    }
+
+    throw error
   }
 
-  const data = (await response.json()) as UploadProductoImagesResponse
   const uploadedImages =
     data.images?.map((image) => ({
       url: resolveImageUrl(image.secureUrl) ?? image.secureUrl,

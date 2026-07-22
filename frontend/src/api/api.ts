@@ -1,12 +1,29 @@
 import axios from 'axios'
 
+const isBrowser = () => typeof window !== 'undefined'
+
+const normalizeApiUrl = (value: string) => {
+  const normalizedValue = value.trim()
+
+  if (!normalizedValue) {
+    return normalizedValue
+  }
+
+  if (isBrowser() && window.location.protocol === 'https:') {
+    return normalizedValue.replace(/^http:\/\//i, 'https://')
+  }
+
+  return normalizedValue
+}
+
 const rawApiUrl =
   typeof import.meta.env.VITE_API_URL === 'string'
-    ? import.meta.env.VITE_API_URL.trim()
+    ? normalizeApiUrl(import.meta.env.VITE_API_URL)
     : ''
 
 export const API_URL = rawApiUrl || 'http://localhost:3000'
 export const AUTH_TOKEN_STORAGE_KEY = 'noir-blanc.auth.token'
+const AUTH_USER_STORAGE_KEY = 'noir-blanc.auth.user'
 
 const api = axios.create({
   baseURL: API_URL,
@@ -24,6 +41,26 @@ api.interceptors.request.use((config) => {
 
   return config
 })
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (
+      axios.isAxiosError(error) &&
+      error.response?.status === 401 &&
+      typeof window !== 'undefined'
+    ) {
+      window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY)
+      window.localStorage.removeItem(AUTH_USER_STORAGE_KEY)
+
+      if (window.location.pathname.startsWith('/admin')) {
+        window.location.replace('/?sesion=expirada')
+      }
+    }
+
+    return Promise.reject(error)
+  },
+)
 
 export const getApiErrorMessage = (
   error: unknown,

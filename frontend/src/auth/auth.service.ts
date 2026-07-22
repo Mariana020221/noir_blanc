@@ -37,6 +37,35 @@ export interface BootstrapStatusResponse {
 
 const isBrowser = () => typeof window !== 'undefined'
 
+const readJwtPayload = (
+  token: string,
+): { exp?: number; rol?: UsuarioAuth['rol'] } | null => {
+  try {
+    const [, payload] = token.split('.')
+
+    if (!payload) {
+      return null
+    }
+
+    const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const decodedPayload = window.atob(normalizedPayload)
+
+    return JSON.parse(decodedPayload) as { exp?: number; rol?: UsuarioAuth['rol'] }
+  } catch {
+    return null
+  }
+}
+
+const isTokenExpired = (token: string): boolean => {
+  const payload = readJwtPayload(token)
+
+  if (!payload?.exp) {
+    return false
+  }
+
+  return payload.exp * 1000 <= Date.now()
+}
+
 export const loginRequest = async (credentials: LoginDto) => {
   const { data } = await api.post<LoginResponse>('/auth/login', credentials)
 
@@ -89,11 +118,26 @@ export const readStoredToken = (): string | null => {
     return null
   }
 
-  return window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
+  const token = window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
+
+  if (!token) {
+    return null
+  }
+
+  if (isTokenExpired(token)) {
+    clearAuthSession()
+    return null
+  }
+
+  return token
 }
 
 export const readStoredUser = (): UsuarioAuth | null => {
   if (!isBrowser()) {
+    return null
+  }
+
+  if (!readStoredToken()) {
     return null
   }
 
