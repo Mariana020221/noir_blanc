@@ -31,6 +31,8 @@ async function bootstrap() {
   const allowedOrigins = [
     frontendUrl,
     'http://localhost:5173',
+    'http://localhost:4200',
+    'http://127.0.0.1:4200',
     'http://localhost:3000',
     'https://noirandblanc.up.railway.app',
   ]

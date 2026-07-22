@@ -1,11 +1,11 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { v2 as cloudinary, type UploadApiResponse } from 'cloudinary';
-import { Readable } from 'node:stream';
 import { getCloudinaryEnvironment } from '../../config/cloudinary.config';
 
 export interface CloudinaryUploadedImage {
@@ -38,29 +38,24 @@ export class CloudinaryService {
     file: Express.Multer.File,
     folder = 'noir-blanc/productos',
   ): Promise<CloudinaryUploadedImage> {
+    if (!file?.buffer?.length) {
+      throw new BadRequestException(
+        'No se recibio el contenido de la imagen en el servidor.',
+      );
+    }
+
     try {
-      const result = await new Promise<UploadApiResponse>((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          {
-            folder,
-            resource_type: 'image',
-          },
-          (error, response) => {
-            if (error || !response) {
-              reject(
-                new Error(
-                  error?.message ?? 'Cloudinary no devolvio respuesta valida.',
-                ),
-              );
-              return;
-            }
+      const dataUri = `data:${file.mimetype || 'application/octet-stream'};base64,${file.buffer.toString(
+        'base64',
+      )}`;
 
-            resolve(response);
-          },
-        );
-
-        Readable.from(file.buffer).pipe(uploadStream);
-      });
+      const result: UploadApiResponse = await cloudinary.uploader.upload(
+        dataUri,
+        {
+          folder,
+          resource_type: 'image',
+        },
+      );
 
       return {
         secureUrl: result.secure_url,
@@ -71,11 +66,25 @@ export class CloudinaryService {
         bytes: result.bytes,
       };
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'error desconocido';
+
       this.logger.error(
         `Fallo al subir una imagen a Cloudinary: ${
-          error instanceof Error ? error.message : 'error desconocido'
+          errorMessage
         }`,
       );
+
+      if (
+        errorMessage.includes('Must supply api_key') ||
+        errorMessage.includes('api_key') ||
+        errorMessage.includes('cloud_name')
+      ) {
+        throw new InternalServerErrorException(
+          'Cloudinary no esta configurado correctamente en el backend desplegado.',
+        );
+      }
+
       throw new InternalServerErrorException(
         'No fue posible subir la imagen en este momento.',
       );
