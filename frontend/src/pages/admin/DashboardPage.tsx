@@ -60,7 +60,7 @@ export const DashboardPage = () => {
       <section className="section-heading">
         <div>
           <h2>Dashboard</h2>
-          <p>Panorama rapido del catalogo y la visibilidad actual de la tienda.</p>
+          <p>Panorama rapido del catálogo y la visibilidad actual de la tienda.</p>
         </div>
         {isSuperUser ? (
           <Link className="button button--secondary" to="/admin/productos/crear">
@@ -80,7 +80,7 @@ export const DashboardPage = () => {
         <article className="stat-card">
           <span className="small-label">Activos</span>
           <strong className="stat-value">{activos.length}</strong>
-          <p className="muted-text">Visibles para el catalogo publico.</p>
+          <p className="muted-text">Visibles para el catálogo publico.</p>
         </article>
         <article className="stat-card">
           <span className="small-label">Categorias</span>
@@ -108,7 +108,7 @@ export const DashboardPage = () => {
           </div>
           <p className="lede">
             Usa este tablero para detectar rapidamente productos visibles, marcas
-            dominantes y las ultimas altas del catalogo.
+            dominantes y las ultimas altas del catálogo.
           </p>
 
           <div className="hero-meta">

@@ -1,7 +1,7 @@
-import { DataSource } from 'typeorm';
-import { loadEnvironmentFiles } from '../config/env-files';
-import { getDataSourceOptions } from './typeorm.config';
+    import { DataSource } from 'typeorm';
+    import { loadEnvironmentFiles } from '../config/env-files';
+    import { getDataSourceOptions } from './typeorm.config';
 
-loadEnvironmentFiles();
+    loadEnvironmentFiles();
 
-export default new DataSource(getDataSourceOptions());
+    export default new DataSource(getDataSourceOptions());

@@ -155,7 +155,7 @@ export const CatalogoPage = () => {
           setError(
             getApiErrorMessage(
               requestError,
-              'No fue posible cargar el catalogo por ahora.',
+              'No fue posible cargar el catálogo por ahora.',
             ),
           )
         }
@@ -231,9 +231,6 @@ export const CatalogoPage = () => {
       </div>
 
       <div className="catalog-results-bar">
-        <span className="small-label">
-          {filteredProducts.length} resultados visibles
-        </span>
         {hasActiveFilters ? (
           <button
             className="button button--ghost"
@@ -242,9 +239,7 @@ export const CatalogoPage = () => {
           >
             Limpiar filtros
           </button>
-        ) : (
-          <span className="small-label">Sin checkout, solo exhibicion</span>
-        )}
+        ) : null}
       </div>
 
       {error ? <div className="alert alert--error">{error}</div> : null}

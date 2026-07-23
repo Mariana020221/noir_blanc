@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { getApiErrorMessage } from '../../api/api'
 import { getProductCategoryLabel } from '../../constants/productCategories'
 import {
@@ -113,6 +113,7 @@ export const ProductoDetallePage = () => {
     null,
   )
   const [failedSelectedImage, setFailedSelectedImage] = useState<string | null>(null)
+  const [failedThumbImages, setFailedThumbImages] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -133,6 +134,7 @@ export const ProductoDetallePage = () => {
           setSelectedVariantKey(null)
           setSelectedImagePreference(null)
           setFailedSelectedImage(null)
+          setFailedThumbImages([])
           setError(null)
         }
       } catch (requestError) {
@@ -175,9 +177,6 @@ export const ProductoDetallePage = () => {
   if (invalidProductoId) {
     return (
       <div className="content-stack">
-        <Link className="back-link" to="/">
-          Volver al catalogo
-        </Link>
         <div className="alert alert--error">El producto solicitado no es valido.</div>
       </div>
     )
@@ -194,9 +193,6 @@ export const ProductoDetallePage = () => {
   if (error) {
     return (
       <div className="content-stack">
-        <Link className="back-link" to="/">
-          Volver al catalogo
-        </Link>
         <div className="alert alert--error">{error}</div>
       </div>
     )
@@ -205,94 +201,85 @@ export const ProductoDetallePage = () => {
   if (!producto) {
     return (
       <div className="content-stack">
-        <Link className="back-link" to="/">
-          Volver al catalogo
-        </Link>
         <div className="empty-state">No encontramos ese producto.</div>
       </div>
     )
   }
 
+  const detailDescription = producto.descripcion.trim()
+    ? `ID #${producto.id} - ${producto.descripcion}`
+    : `ID #${producto.id}`
+
   return (
     <div className="content-stack detail-page-shell">
-      <Link className="back-link" to="/">
-        Volver al catalogo
-      </Link>
-
       <section className="detail-grid">
-        <article className="detail-gallery-column">
-          <div className="detail-media">
-            {selectedImage && failedSelectedImage !== selectedImage ? (
-              <img
-                alt={producto.nombre}
-                onError={() => setFailedSelectedImage(selectedImage)}
-                src={selectedImage}
-              />
-            ) : (
-              <div className="media-fallback">Noir & Blanc</div>
-            )}
+        <div className="detail-media-column">
+          <div className="detail-mobile-title">
+            <h1 className="detail-name detail-name--mobile">{producto.nombre}</h1>
           </div>
 
-          {colorVariants.length > 0 ? (
-            <div className="detail-color-switcher">
-              <button
-                className={`filter-chip${selectedVariantKey === null ? ' is-active' : ''}`}
-                onClick={() => setSelectedVariantKey(null)}
-                type="button"
+          <div className="detail-gallery-frame">
+            {galeria.length > 1 ? (
+              <div
+                className="detail-thumbs detail-thumbs--desktop"
+                aria-label="Vistas del producto"
               >
-                Todas las vistas
-              </button>
-              {colorVariants.map((variant) => (
-                <button
-                  className={`detail-swatch-button${
-                    selectedVariantKey === variant.key ? ' is-active' : ''
-                  }`}
-                  key={variant.key}
-                  onClick={() => setSelectedVariantKey(variant.key)}
-                  type="button"
-                >
-                  <span
-                    className="detail-swatch-dot"
-                    style={{ backgroundColor: variant.colorHex }}
-                  />
-                  <span>{variant.label}</span>
-                </button>
-              ))}
-            </div>
-          ) : null}
+                {galeria.map((image) => (
+                  <button
+                    aria-label={`Vista de ${producto.nombre}`}
+                    className={`thumb-button${
+                      image === selectedImage ? ' is-active' : ''
+                    }`}
+                    key={image}
+                    onClick={() => {
+                      setSelectedImagePreference(image)
+                      setFailedSelectedImage(null)
+                    }}
+                    type="button"
+                  >
+                    {failedThumbImages.includes(image) ? (
+                      <span aria-hidden="true" className="thumb-fallback">
+                        NB
+                      </span>
+                    ) : (
+                      <img
+                        alt=""
+                        onError={() =>
+                          setFailedThumbImages((current) =>
+                            current.includes(image) ? current : [...current, image],
+                          )
+                        }
+                        src={image}
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+            ) : null}
 
-          {galeria.length > 1 ? (
-            <div className="detail-thumbs">
-              {galeria.map((image) => (
-                <button
-                  className={`thumb-button${
-                    image === selectedImage ? ' is-active' : ''
-                  }`}
-                  key={image}
-                  onClick={() => {
-                    setSelectedImagePreference(image)
-                    setFailedSelectedImage(null)
-                  }}
-                  type="button"
-                >
-                  <img alt={`Vista de ${producto.nombre}`} src={image} />
-                </button>
-              ))}
+            <div className="detail-media">
+              {selectedImage && failedSelectedImage !== selectedImage ? (
+                <img
+                  alt={producto.nombre}
+                  onError={() => setFailedSelectedImage(selectedImage)}
+                  src={selectedImage}
+                />
+              ) : (
+                <div className="media-fallback">Noir & Blanc</div>
+              )}
             </div>
-          ) : null}
-        </article>
+          </div>
+
+        </div>
 
         <aside className="detail-panel detail-stack">
           <div className="detail-heading-block">
             <span className="eyebrow">Detalle de producto</span>
-            <h1 className="detail-name">{producto.nombre}</h1>
+            <h1 className="detail-name detail-name--desktop">{producto.nombre}</h1>
             <div className="detail-price">{formatPrecio(producto.precio)}</div>
           </div>
 
-          <p className="lede">
-            <span className="detail-id-copy">ID del producto #{producto.id}</span>
-            {producto.descripcion}
-          </p>
+          <p className="lede">{detailDescription}</p>
 
           <div className="detail-meta-row">
             {categorias.map((categoria) => (
@@ -312,38 +299,76 @@ export const ProductoDetallePage = () => {
               <span className="meta-chip">Vista {selectedVariant.label}</span>
             ) : null}
           </div>
-
-          <div className="surface-card">
-            <div className="section-heading">
-              <h2>Ficha</h2>
-              <span className="small-label">{producto.existencia} piezas</span>
-            </div>
-
-            <div className="detail-meta-row">
-              {producto.tallas.length > 0 ? (
-                producto.tallas.map((talla) => (
-                  <span className="tag-chip" key={talla}>
-                    Talla {talla}
-                  </span>
-                ))
-              ) : (
-                <span className="muted-text">Sin tallas registradas.</span>
-              )}
-            </div>
-
-            <div className="detail-meta-row">
-              {producto.colores.length > 0 ? (
-                producto.colores.map((color) => (
-                  <span className="tag-chip" key={color}>
-                    {color}
-                  </span>
-                ))
-              ) : (
-                <span className="muted-text">Sin colores registrados.</span>
-              )}
-            </div>
-          </div>
         </aside>
+
+        {colorVariants.length > 0 ? (
+          <div
+            className={`detail-gallery-rails${galeria.length > 1 ? ' has-thumbs' : ''}`}
+          >
+            <div className="detail-color-switcher" aria-label="Colores del producto">
+              {colorVariants.map((variant) => (
+                <button
+                  className={`detail-swatch-button${
+                    selectedVariantKey === variant.key ? ' is-active' : ''
+                  }`}
+                  key={variant.key}
+                  onClick={() => {
+                    setSelectedVariantKey((current) =>
+                      current === variant.key ? null : variant.key,
+                    )
+                    setSelectedImagePreference(null)
+                    setFailedSelectedImage(null)
+                  }}
+                  type="button"
+                >
+                  <span
+                    className="detail-swatch-dot"
+                    style={{ backgroundColor: variant.colorHex }}
+                  />
+                  <span>{variant.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {galeria.length > 1 ? (
+              <div
+                className="detail-thumbs detail-thumbs--mobile"
+                aria-label="Vistas del producto"
+              >
+                {galeria.map((image) => (
+                  <button
+                    aria-label={`Vista de ${producto.nombre}`}
+                    className={`thumb-button${
+                      image === selectedImage ? ' is-active' : ''
+                    }`}
+                    key={`mobile-${image}`}
+                    onClick={() => {
+                      setSelectedImagePreference(image)
+                      setFailedSelectedImage(null)
+                    }}
+                    type="button"
+                  >
+                    {failedThumbImages.includes(image) ? (
+                      <span aria-hidden="true" className="thumb-fallback">
+                        NB
+                      </span>
+                    ) : (
+                      <img
+                        alt=""
+                        onError={() =>
+                          setFailedThumbImages((current) =>
+                            current.includes(image) ? current : [...current, image],
+                          )
+                        }
+                        src={image}
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </section>
     </div>
   )

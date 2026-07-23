@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { getApiErrorMessage } from '../../api/api'
 import { useAuth } from '../../auth/AuthContext'
@@ -68,6 +69,23 @@ export const LoginPage = ({ overlay = false }: LoginPageProps) => {
       active = false
     }
   }, [])
+
+  useEffect(() => {
+    if (!overlay) {
+      return
+    }
+
+    const previousBodyOverflow = document.body.style.overflow
+    const previousHtmlOverflow = document.documentElement.style.overflow
+
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow
+      document.documentElement.style.overflow = previousHtmlOverflow
+    }
+  }, [overlay])
 
   if (isAuthenticated) {
     return <Navigate replace to={isSuperUser ? '/admin' : '/'} />
@@ -267,7 +285,7 @@ export const LoginPage = ({ overlay = false }: LoginPageProps) => {
   )
 
   if (overlay) {
-    return (
+    return createPortal(
       <div className="login-overlay" onClick={closeOverlay}>
         <div
           className="login-overlay-shell"
@@ -275,7 +293,8 @@ export const LoginPage = ({ overlay = false }: LoginPageProps) => {
         >
           {content}
         </div>
-      </div>
+      </div>,
+      document.body,
     )
   }
 

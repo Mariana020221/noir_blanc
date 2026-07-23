@@ -47,7 +47,7 @@ export const AdminLayout = () => {
             <strong>{usuario?.nombre ?? 'Administrador'}</strong>
             <p className="muted-text">
               {isSuperUser
-                ? 'El superusuario controla las cuentas del equipo y el resto del catalogo desde modulos separados.'
+                ? 'El superusuario controla las cuentas del equipo y el resto del catálogo desde modulos separados.'
                 : 'Tu cuenta tiene acceso limitado. Solo el primer acceso puede administrar usuarios y gestionar productos.'}
             </p>
           </div>
@@ -64,9 +64,14 @@ export const AdminLayout = () => {
             <span className="eyebrow">Admin protegido</span>
             <h1 className="panel-title">Noir&Blanc Control Room</h1>
           </div>
-          <div className="small-label">
-            Sesion activa: {usuario?.email ?? 'administrador'} |{' '}
-            {usuario?.rol === 'SUPER_ADMIN' ? 'Superusuario' : 'Usuario del panel'}
+          <div className="admin-header-actions">
+            <NavLink className="button button--ghost" to="/">
+              Catalogo
+            </NavLink>
+            <div className="small-label">
+              Sesion activa: {usuario?.email ?? 'administrador'} |{' '}
+              {usuario?.rol === 'SUPER_ADMIN' ? 'Superusuario' : 'Usuario del panel'}
+            </div>
           </div>
         </header>
 

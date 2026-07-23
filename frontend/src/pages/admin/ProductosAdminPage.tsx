@@ -1484,7 +1484,7 @@ const ProductoFormFields = ({
           onChange={onInputChange}
           type="checkbox"
         />
-        <span>Producto activo y visible en el catalogo</span>
+        <span>Producto activo y visible en el catálogo</span>
       </label>
     </div>
   )
@@ -1895,7 +1895,7 @@ const ProductosAdminPage = ({ mode }: ProductosAdminPageProps) => {
 
   const handleDelete = async (producto: Producto) => {
     const confirmed = window.confirm(
-      `Eliminar "${producto.nombre}" del catalogo?`,
+      `Eliminar "${producto.nombre}" del catálogo?`,
     )
 
     if (!confirmed) {
@@ -2150,35 +2150,27 @@ const ProductosAdminPage = ({ mode }: ProductosAdminPageProps) => {
   const isCreateUploading = createUploadingField !== null
   const isEditUploading = editUploadingField !== null
   const pageTitle = mode === 'crear' ? 'Crear productos' : 'Editar productos'
-  const pageDescription =
-    mode === 'editar'
-      ? 'Selecciona un producto del catalogo y abre su edicion en una ventana central, sin panel lateral.'
-      : ''
-
   return (
     <div className="content-stack">
       <section className="section-heading section-heading--admin-products">
         <div className="admin-heading-top">
           <div className="admin-heading-copy">
             <h2>{pageTitle}</h2>
-            {pageDescription ? (
-              <p className="admin-heading-description">{pageDescription}</p>
-            ) : null}
           </div>
           {mode === 'editar' ? (
             <div className="admin-toolbar-meta">
-              <button
-                className="status-chip status-chip--action"
-                onClick={() => navigate('/')}
-                type="button"
-              >
-                Ver catalogo
-              </button>
               <span className="small-label">
                 {loading
                   ? 'Actualizando...'
                   : `${filteredProductos.length} de ${productos.length} visibles`}
               </span>
+              <button
+                className="status-chip status-chip--action"
+                onClick={() => navigate('/')}
+                type="button"
+              >
+                Ver catálogo
+              </button>
             </div>
           ) : (
             <div className="admin-toolbar-meta">
@@ -2441,7 +2433,7 @@ const ProductosAdminPage = ({ mode }: ProductosAdminPageProps) => {
         {mode === 'editar' && editForm && editingId ? (
           <AdminModal
             onClose={resetEditForm}
-            subtitle={`Producto #${editingId} · Ajusta fotos, colores y categorias sin salir del catalogo.`}
+            subtitle={`Producto #${editingId} · Ajusta fotos, colores y categorias sin salir del catálogo.`}
             title="Editar producto"
             footer={
               <div className="inline-actions">

@@ -36,7 +36,10 @@ export const PublicLayout = () => {
   const { isAuthenticated, isSuperUser, logout } = useAuth()
   const searchParams = new URLSearchParams(location.search)
   const showLoginOverlay = location.pathname === '/login'
-  const isCatalogView = location.pathname === '/' || showLoginOverlay
+  const isCatalogHomeView = location.pathname === '/' || showLoginOverlay
+  const isProductDetailView = location.pathname.startsWith('/producto/')
+  const isCatalogView =
+    isCatalogHomeView || isProductDetailView
   const selectedCategory = normalizeProductCategory(
     searchParams.get('categoria') ?? ALL_PRODUCT_CATEGORIES_VALUE,
   )
@@ -111,7 +114,7 @@ export const PublicLayout = () => {
         <div className="public-header-center">
           <nav
             className="public-category-nav public-category-nav--desktop"
-            aria-label="Categorias del catalogo"
+            aria-label="Categorias del catálogo"
           >
             <NavLink
               className={`public-category-link${
@@ -177,10 +180,6 @@ export const PublicLayout = () => {
                     navigate(buildCatalogRoute(selectedCategory, nextValue))
                   }
                   options={[
-                    {
-                      label: 'Todas las marcas',
-                      value: '',
-                    },
                     ...brandOptions.map((brand) => ({
                       label: brand,
                       value: brand,
@@ -196,14 +195,19 @@ export const PublicLayout = () => {
           </div>
         </div>
 
-        <nav className="public-nav public-nav--actions" aria-label="Navegacion principal">
+        <nav
+          className={`public-nav public-nav--actions${
+            isCatalogHomeView ? ' is-catalog-view' : ''
+          }`}
+          aria-label="Navegacion principal"
+        >
           <NavLink
             className={({ isActive }) =>
               `nav-pill${isActive ? ' is-active' : ''}`
             }
             to="/"
           >
-            Catalogo
+            Catálogo
           </NavLink>
           {isSuperUser ? (
             <NavLink

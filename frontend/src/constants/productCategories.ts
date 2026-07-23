@@ -28,6 +28,11 @@ export const PRODUCT_CATEGORY_OPTIONS: ProductCategoryOption[] = [
     description: 'Bolsos, gorras y detalles',
   },
   {
+    value: 'CALZADO',
+    label: 'Calzado',
+    description: 'Tenis, botas y zapatos',
+  },
+  {
     value: 'SALE',
     label: 'Sale',
     description: 'Piezas con precio especial',
